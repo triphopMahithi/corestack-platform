@@ -12,7 +12,7 @@ import logging
 from time import localtime, strftime
 
 # --- Third-party libraries ---
-from flask import Flask, request, abort, jsonify, render_template
+from flask import Flask, request, abort, jsonify, render_template, Blueprint
 import requests
 import ollama
 from pymongo import MongoClient
@@ -27,131 +27,29 @@ from linebot.v3.messaging import (
     TextMessage,
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
+from utils.helpers import *
 
+# --- routes ---
+from db import collection
+from routes.website import website_bp
 
 os.system('cls' if os.name == 'nt' else 'clear')
-time_alert = strftime("%a, %d %b %Y %H:%M:%S %z", localtime())
-
-app = Flask(__name__)
 
 # YOUR_CHANNEL_ACCESS_TOKEN AND YOUR_CHANNEL_SECRET
 configuration = Configuration(access_token='qyflOf3hPw+QSBsJ2e3VPt+snbADiut9+dTWShe0fq2kB3LyfynsB7V9G0ssAevh96WUzpRcrUxeX+fpvlL1hvLJ3eQvFTZTC4gNILyrJBq+uZiTz2TRAq0mrr9qYCZ6+vZHndC2Dp6GSP6hKdO0oAdB04t89/1O/w1cDnyilFU=')
 handler = WebhookHandler('a51b3f381532d12e4a94ade383058a37')
-MAX_LENGTH = 5000
+
 # Generative AI 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "llama3.2"
+
 # Database
 client = MongoClient('mongodb://localhost:27017/')
 collection = client["Testing"]["Packages"]
 
-# ——— Helper functions ———
-
-
-# Helper to convert ObjectId
-def serialize_doc(doc):
-    doc['_id'] = str(doc['_id'])
-    return doc
-
-def parse_search_params(user_input: str):
-    """
-    แยกค่าจาก user_input: แผน, อายุ, เพศ
-    คืนค่า tuple (plan_code:str|None, age:int|None, sex:'M'|'F'|None)
-    """
-    class_m = re.search(r"\bแผน\s*([A-Za-z0-9]+)\b", user_input, re.IGNORECASE)
-    age_m   = re.search(r"อายุ\s*(\d{1,3})", user_input)
-    sex_m   = re.search(r"(ชาย|หญิง)", user_input)
-
-    plan_code = class_m.group(1).upper() if class_m else None
-    age       = int(age_m.group(1))     if age_m   else None
-    sex       = 'M' if sex_m and sex_m.group(1) == 'ชาย' else \
-                'F' if sex_m                 else None
-
-    return plan_code, age, sex
-
-def within_age_range(age: int, expr: str) -> bool:
-    """ตรวจสอบว่า age อยู่ในช่วงที่ระบุใน expr เช่น '10-20'"""
-    m = re.match(r"(\d+)\s*(?:-|–|ถึง)\s*(\d+)", expr)
-    if not m:
-        return False
-    low, high = int(m.group(1)), int(m.group(2))
-    return low <= age <= high
-
-def determine_price(doc: dict, sex: str|None) -> str|int|float:
-    """
-    ถ้ามี sex ให้ return ราคาตาม sex
-    ถ้าไม่มี sex ให้ return dict-string ของทั้ง M และ F
-    """
-    if sex in ('M','F'):
-        return doc.get(sex, 'ไม่มีข้อมูลราคา')
-    # ไม่มีเพศระบุ
-    return {
-        'M': doc.get('M', 'ไม่มีข้อมูล'),
-        'F': doc.get('F', 'ไม่มีข้อมูล'),
-    }
-
-def format_price(price: str|int|float|dict) -> str:
-    """ฟอร์แมตราคาให้เป็นสตริงพร้อมหน่วย 'บาท'"""
-    if isinstance(price, (int, float)):
-        return f"{price:,} บาท"
-    if isinstance(price, dict):
-        m = price['M']
-        f = price['F']
-        m_txt = f"{m:,} บาท" if isinstance(m, (int,float)) else m
-        f_txt = f"{f:,} บาท" if isinstance(f, (int,float)) else f
-        return f"ชาย: {m_txt}\nหญิง: {f_txt}"
-    return str(price)
-
-def split_into_chunks(text: str, size: int = MAX_LENGTH) -> list[str]:
-    """แบ่งข้อความเป็นชิ้นๆ ไม่ให้ยาวเกิน size"""
-    return [text[i:i+size] for i in range(0, len(text), size)]
-
-def safe_reply(line_bot_api, reply_token: str, full_text: str):
-    """
-    ส่งข้อความกลับผู้ใช้ โดยแบ่ง chunk ถ้าความยาวเกิน MAX_LEN
-    """
-    chunks = split_into_chunks(full_text)
-    for chunk in chunks:
-        line_bot_api.reply_message_with_http_info(
-            ReplyMessageRequest(
-                reply_token=reply_token,
-                messages=[TextMessage(text=chunk)]
-            )
-        )
-
-def is_ollama_online(timeout: float = 2.0) -> bool:
-    """
-    ตรวจสอบว่า Ollama พร้อมให้บริการ
-    คืนค่า True ถ้าสถานะ HTTP 200, False ถ้าไม่สำเร็จ
-    """
-    try:
-        resp = requests.get(f"{OLLAMA_URL}/v1/models", timeout=timeout)
-        return resp.status_code == 200
-    except requests.RequestException as e:
-        logging.error(f"[HealthCheck] ไม่สามารถติดต่อ Ollama ได้: {e}")
-        return False
-
-@app.route("/")
-def hello_world():
-    return "<p>Hello, World!</p>"
-
-@app.route("/data")
-def get_data():
-    data_cursor = collection.find(filter=filter)
-    data = [serialize_doc(doc) for doc in data_cursor]
-    return jsonify(data)
-
-@app.route("/api/products")
-def get_products():
-    products = collection.find({})
-    return jsonify([serialize_doc(p) for p in products])
-
-@app.route("/store")
-def storefront():
-    products = list(collection.find({}))
-    for p in products:
-        p["_id"] = str(p["_id"])
-    return render_template("store.html", products=products)
+# --- Initialize Flask app ---
+from __init__ import create_app
+app = create_app()
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -171,15 +69,6 @@ def callback():
 
     return 'OK'
 
-def ask_ollama(prompt):
-    payload = {
-        "model": OLLAMA_MODEL,
-        "prompt": prompt,
-        "stream": False
-    }
-    response = requests.post(OLLAMA_URL, json=payload)
-    response.raise_for_status()
-    return response.json().get("response", "")
 
 #! FIX: Non-Length must be between 0 and 5000 [text-length] 
 #! FIX: Error Code
@@ -267,5 +156,5 @@ def handle_message(event):
             )
 
 if __name__ == "__main__":
-    is_ollama_online()
-    app.run()
+    is_ollama_online(OLLAMA_URL=OLLAMA_URL)
+    app.run(debug=True)
