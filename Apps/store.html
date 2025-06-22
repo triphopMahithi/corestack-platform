@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head><title>หน้าร้าน</title></head>
+<body>
+  <h1>สินค้า</h1>
+  <ul>
+    {% for p in products %}
+      <li>{{ p["name"] }} - ราคา {{ p["price"] }} บาท</li>
+    {% endfor %}
+  </ul>
+</body>
+</html>

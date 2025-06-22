@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>รายการสินค้า</title>
+  <style>
+    table { border-collapse: collapse; width: 70%; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #f2f2f2; }
+    button { margin: 5px; padding: 5px 10px; }
+  </style>
+</head>
+<body>
+
+  <h1>รายการสินค้า</h1>
+
+  <div>
+    <button onclick="showAll()">ทั้งหมด</button>
+    <button onclick="filterGender('F')">เฉพาะหญิง</button>
+    <button onclick="filterGender('M')">เฉพาะชาย</button>
+  </div>
+
+  <table id="product-table">
+    <thead>
+      <tr>
+        <th>ปี</th>
+        <th>ระดับชั้น</th>
+        <th>ราคา (หญิง)</th>
+        <th>ราคา (ชาย)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+      <tr>
+        <td>{{ p.get("year", "-") }}</td>
+        <td>{{ p.get("Class", "-") }}</td>
+        <td class="gender-F">{{ "{:,.2f}".format(p.get("F", 0)) }}</td>
+        <td class="gender-M">{{ "{:,.2f}".format(p.get("M", 0)) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <script>
+    function filterGender(gender) {
+      const fCells = document.querySelectorAll(".gender-F");
+      const mCells = document.querySelectorAll(".gender-M");
+
+      fCells.forEach(cell => {
+        cell.style.display = (gender === 'F') ? '' : 'none';
+      });
+      mCells.forEach(cell => {
+        cell.style.display = (gender === 'M') ? '' : 'none';
+      });
+    }
+
+    function showAll() {
+      document.querySelectorAll(".gender-F, .gender-M").forEach(cell => {
+        cell.style.display = '';
+      });
+    }
+  </script>
+
+</body>
+</html>
