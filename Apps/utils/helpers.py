@@ -35,7 +35,7 @@ def parse_search_params(user_input: str):
     แยกค่าจาก user_input: แผน, อายุ, เพศ
     คืนค่า tuple (plan_code:str|None, age:int|None, sex:'M'|'F'|None)
     """
-    class_m = re.search(r"\bแผน\s*([A-Za-z0-9]+)\b", user_input, re.IGNORECASE)
+    class_m = re.search(r"แผน\s+(.+?)(?=\s*(อายุ|เพศ|$))", user_input, re.IGNORECASE)
     age_m   = re.search(r"อายุ\s*(\d{1,3})", user_input)
     sex_m   = re.search(r"(ชาย|หญิง)", user_input)
 
@@ -96,6 +96,13 @@ def safe_reply(line_bot_api, reply_token: str, full_text: str):
                 messages=[TextMessage(text=chunk)]
             )
         )
+
+def regular_expression_search(keywords : list[str]) -> str:
+    """
+    รับลิสต์ของคำค้นหา แล้วสร้าง regex pattern ที่แมตช์คำตามลำดับ
+    """
+    return ".*" + ".*".join(map(re.escape, keywords)) + ".*"
+    
 
 def is_ollama_online(OLLAMA_URL,timeout: float = 2.0) -> bool:
     """

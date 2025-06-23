@@ -1,9 +1,7 @@
 #!usr/bin/env python3
 
-# -*- coding: utf-8 -*-
-"""
-    PEP8 Style 
-"""
+# setup.py
+
 # --- Standard library ---
 import os
 import re
@@ -33,19 +31,28 @@ from utils.helpers import *
 from db import collection
 from routes.website import website_bp
 
-os.system('cls' if os.name == 'nt' else 'clear')
+
+#--- config --- 
+from dotenv import load_dotenv
+load_dotenv()
+
+# --- environment variables ---
+CHANNEL_SECRET = os.getenv("CHANNEL_SECRET")
+CHANNEL_TOKEN = os.getenv("CHANNEL_TOKEN")
+OLLAMA_URL = os.getenv("OLLAMA_URL")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+MONGO_DB = os.getenv("MONGO_DB", "Testing")
+MONGO_DB_COLLECTION = os.getenv("MONGO_DB_COLLECTION", "Packages")
 
 # YOUR_CHANNEL_ACCESS_TOKEN AND YOUR_CHANNEL_SECRET
-configuration = Configuration(access_token='qyflOf3hPw+QSBsJ2e3VPt+snbADiut9+dTWShe0fq2kB3LyfynsB7V9G0ssAevh96WUzpRcrUxeX+fpvlL1hvLJ3eQvFTZTC4gNILyrJBq+uZiTz2TRAq0mrr9qYCZ6+vZHndC2Dp6GSP6hKdO0oAdB04t89/1O/w1cDnyilFU=')
-handler = WebhookHandler('a51b3f381532d12e4a94ade383058a37')
-
-# Generative AI 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "llama3.2"
-
+configuration = Configuration(access_token=CHANNEL_TOKEN)
+handler = WebhookHandler(CHANNEL_SECRET)
 # Database
-client = MongoClient('mongodb://localhost:27017/')
-collection = client["Testing"]["Packages"]
+CLIENT = MongoClient(MONGO_URI)
+db = CLIENT[MONGO_DB]
+COLLECTION=db[MONGO_DB_COLLECTION]
+
 
 # --- Initialize Flask app ---
 from __init__ import create_app
@@ -71,8 +78,6 @@ def callback():
 
 
 #! FIX: Non-Length must be between 0 and 5000 [text-length] 
-#! FIX: Error Code
-
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     user_input = event.message.text.strip()
@@ -115,10 +120,12 @@ def handle_message(event):
                     )
                 )
                 return
-
+            print(f"user_input: {user_input}, plan_code: {plan_code}, age: {age},")
             # ดึงข้อมูลจาก DB
-            query = {"Class": {"$regex": plan_code, "$options": "i"}} if plan_code else {}
-            docs = list(collection.find(query))
+            keywords = plan_code.split()
+            pattern = regular_expression_search(keywords=keywords) if keywords else None
+            query = {"Class": {"$regex": pattern, "$options": "i"}} if keywords else {}
+            docs = list(COLLECTION.find(query))
 
             # สร้างข้อความผลลัพธ์
             lines = [f"ค้นหาจากทั้งหมด {len(docs)} รายการ"]
@@ -141,7 +148,7 @@ def handle_message(event):
                 line_bot_api.reply_message_with_http_info(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text="ไม่สามารถส่งข้อความได้")]
+                        messages=[TextMessage(text="ไม่สามารถส่งข้อความได้ เนื่องจากข้อความยาวเกิน 5000 ตัวอักษร")]
                     )
                 )
 
@@ -156,5 +163,6 @@ def handle_message(event):
             )
 
 if __name__ == "__main__":
+    os.system('cls' if os.name == 'nt' else 'clear')
     is_ollama_online(OLLAMA_URL=OLLAMA_URL)
     app.run(debug=True)
