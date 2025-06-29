@@ -8,6 +8,7 @@ import re
 import json
 import logging
 from time import localtime, strftime
+from dotenv import load_dotenv
 
 # --- Third-party libraries ---
 from flask import Flask, request, abort, jsonify, render_template, Blueprint
@@ -25,18 +26,15 @@ from linebot.v3.messaging import (
     TextMessage,
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
-from utils.helpers import *
 
-# --- routes ---
+# --- local imports ---
+from utils.helpers import time_alert, serialize_doc, parse_search_params, within_age_range, determine_price, is_ollama_online
+from utils.helpers import regular_expression_search, format_price, safe_reply
 from db import collection
 from routes.website import website_bp
 
-
-#--- config --- 
-from dotenv import load_dotenv
-load_dotenv()
-
 # --- environment variables ---
+load_dotenv()
 CHANNEL_SECRET = os.getenv("CHANNEL_SECRET")
 CHANNEL_TOKEN = os.getenv("CHANNEL_TOKEN")
 OLLAMA_URL = os.getenv("OLLAMA_URL")
