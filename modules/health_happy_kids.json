@@ -1,0 +1,490 @@
+[
+  {
+    "id": "health-happy-kids-15m",
+    "name": "Health Happy Kids 15M",
+    "categoryId": "critical",
+    "baseMonthly": 0,
+    "baseAnnual": 0,
+    "special": false,
+    "subPackages": null,
+    "genderRestriction": "",
+    "minAge": 11,
+    "maxAge": 98,
+    "pricing": [
+      {
+        "ageFrom": 11,
+        "ageTo": 15,
+        "female": 21600.0,
+        "male": 25500.0
+      },
+      {
+        "ageFrom": 16,
+        "ageTo": 20,
+        "female": 23100.0,
+        "male": 20100.0
+      },
+      {
+        "ageFrom": 21,
+        "ageTo": 25,
+        "female": 27000.0,
+        "male": 21600.0
+      },
+      {
+        "ageFrom": 26,
+        "ageTo": 30,
+        "female": 30600.0,
+        "male": 26100.0
+      },
+      {
+        "ageFrom": 31,
+        "ageTo": 35,
+        "female": 34200.0,
+        "male": 29400.0
+      },
+      {
+        "ageFrom": 36,
+        "ageTo": 40,
+        "female": 37200.0,
+        "male": 31800.0
+      },
+      {
+        "ageFrom": 41,
+        "ageTo": 45,
+        "female": 42900.0,
+        "male": 36000.0
+      },
+      {
+        "ageFrom": 46,
+        "ageTo": 50,
+        "female": 46500.0,
+        "male": 40200.0
+      },
+      {
+        "ageFrom": 51,
+        "ageTo": 55,
+        "female": 50700.0,
+        "male": 50100.0
+      },
+      {
+        "ageFrom": 56,
+        "ageTo": 59,
+        "female": 65100.0,
+        "male": 63900.0
+      },
+      {
+        "ageFrom": 60,
+        "ageTo": 65,
+        "female": 73500.0,
+        "male": 72300.0
+      },
+      {
+        "ageFrom": 66,
+        "ageTo": 70,
+        "female": 107100.0,
+        "male": 105000.0
+      },
+      {
+        "ageFrom": 71,
+        "ageTo": 75,
+        "female": 155700.0,
+        "male": 152100.0
+      },
+      {
+        "ageFrom": 76,
+        "ageTo": 80,
+        "female": 224700.0,
+        "male": 219900.0
+      },
+      {
+        "ageFrom": 81,
+        "ageTo": 85,
+        "female": 325500.0,
+        "male": 318300.0
+      },
+      {
+        "ageFrom": 86,
+        "ageTo": 90,
+        "female": 374400.0,
+        "male": 366000.0
+      },
+      {
+        "ageFrom": 91,
+        "ageTo": 95,
+        "female": 430500.0,
+        "male": 420900.0
+      },
+      {
+        "ageFrom": 96,
+        "ageTo": 98,
+        "female": 495000.0,
+        "male": 484200.0
+      }
+    ]
+  },
+  {
+    "id": "health-happy-kids-1m",
+    "name": "Health Happy Kids 1M",
+    "categoryId": "critical",
+    "baseMonthly": 0,
+    "baseAnnual": 0,
+    "special": false,
+    "subPackages": null,
+    "genderRestriction": "",
+    "minAge": 11,
+    "maxAge": 98,
+    "pricing": [
+      {
+        "ageFrom": 11,
+        "ageTo": 15,
+        "female": 14400.0,
+        "male": 16400.0
+      },
+      {
+        "ageFrom": 16,
+        "ageTo": 20,
+        "female": 15200.0,
+        "male": 13500.0
+      },
+      {
+        "ageFrom": 21,
+        "ageTo": 25,
+        "female": 17200.0,
+        "male": 13700.0
+      },
+      {
+        "ageFrom": 26,
+        "ageTo": 30,
+        "female": 17500.0,
+        "male": 14700.0
+      },
+      {
+        "ageFrom": 31,
+        "ageTo": 35,
+        "female": 18400.0,
+        "male": 15100.0
+      },
+      {
+        "ageFrom": 36,
+        "ageTo": 40,
+        "female": 20400.0,
+        "male": 17000.0
+      },
+      {
+        "ageFrom": 41,
+        "ageTo": 45,
+        "female": 22300.0,
+        "male": 19200.0
+      },
+      {
+        "ageFrom": 46,
+        "ageTo": 50,
+        "female": 24500.0,
+        "male": 21600.0
+      },
+      {
+        "ageFrom": 51,
+        "ageTo": 55,
+        "female": 28500.0,
+        "male": 28300.0
+      },
+      {
+        "ageFrom": 56,
+        "ageTo": 59,
+        "female": 34400.0,
+        "male": 34100.0
+      },
+      {
+        "ageFrom": 60,
+        "ageTo": 65,
+        "female": 41500.0,
+        "male": 40900.0
+      },
+      {
+        "ageFrom": 66,
+        "ageTo": 70,
+        "female": 60800.0,
+        "male": 59400.0
+      },
+      {
+        "ageFrom": 71,
+        "ageTo": 75,
+        "female": 88200.0,
+        "male": 85400.0
+      },
+      {
+        "ageFrom": 76,
+        "ageTo": 80,
+        "female": 126300.0,
+        "male": 122900.0
+      },
+      {
+        "ageFrom": 81,
+        "ageTo": 85,
+        "female": 182700.0,
+        "male": 177800.0
+      },
+      {
+        "ageFrom": 86,
+        "ageTo": 90,
+        "female": 210100.0,
+        "male": 204500.0
+      },
+      {
+        "ageFrom": 91,
+        "ageTo": 95,
+        "female": 241600.0,
+        "male": 235200.0
+      },
+      {
+        "ageFrom": 96,
+        "ageTo": 98,
+        "female": 277800.0,
+        "male": 270500.0
+      }
+    ]
+  },
+  {
+    "id": "health-happy-kids-25m",
+    "name": "Health Happy Kids 25M",
+    "categoryId": "critical",
+    "baseMonthly": 0,
+    "baseAnnual": 0,
+    "special": false,
+    "subPackages": null,
+    "genderRestriction": "",
+    "minAge": 11,
+    "maxAge": 98,
+    "pricing": [
+      {
+        "ageFrom": 11,
+        "ageTo": 15,
+        "female": 27900.0,
+        "male": 33400.0
+      },
+      {
+        "ageFrom": 16,
+        "ageTo": 20,
+        "female": 30300.0,
+        "male": 26200.0
+      },
+      {
+        "ageFrom": 21,
+        "ageTo": 25,
+        "female": 35300.0,
+        "male": 28000.0
+      },
+      {
+        "ageFrom": 26,
+        "ageTo": 30,
+        "female": 38000.0,
+        "male": 33800.0
+      },
+      {
+        "ageFrom": 31,
+        "ageTo": 35,
+        "female": 42300.0,
+        "male": 37800.0
+      },
+      {
+        "ageFrom": 36,
+        "ageTo": 40,
+        "female": 46000.0,
+        "male": 40900.0
+      },
+      {
+        "ageFrom": 41,
+        "ageTo": 45,
+        "female": 53600.0,
+        "male": 47300.0
+      },
+      {
+        "ageFrom": 46,
+        "ageTo": 50,
+        "female": 60700.0,
+        "male": 52400.0
+      },
+      {
+        "ageFrom": 51,
+        "ageTo": 55,
+        "female": 65500.0,
+        "male": 65300.0
+      },
+      {
+        "ageFrom": 56,
+        "ageTo": 59,
+        "female": 84600.0,
+        "male": 83000.0
+      },
+      {
+        "ageFrom": 60,
+        "ageTo": 65,
+        "female": 95700.0,
+        "male": 94100.0
+      },
+      {
+        "ageFrom": 66,
+        "ageTo": 70,
+        "female": 139300.0,
+        "male": 136700.0
+      },
+      {
+        "ageFrom": 71,
+        "ageTo": 75,
+        "female": 202000.0,
+        "male": 197800.0
+      },
+      {
+        "ageFrom": 76,
+        "ageTo": 80,
+        "female": 291800.0,
+        "male": 286300.0
+      },
+      {
+        "ageFrom": 81,
+        "ageTo": 85,
+        "female": 422700.0,
+        "male": 414700.0
+      },
+      {
+        "ageFrom": 86,
+        "ageTo": 90,
+        "female": 486100.0,
+        "male": 476900.0
+      },
+      {
+        "ageFrom": 91,
+        "ageTo": 95,
+        "female": 559000.0,
+        "male": 548400.0
+      },
+      {
+        "ageFrom": 96,
+        "ageTo": 98,
+        "female": 642900.0,
+        "male": 630700.0
+      }
+    ]
+  },
+  {
+    "id": "health-happy-kids-5m",
+    "name": "Health Happy Kids 5M",
+    "categoryId": "critical",
+    "baseMonthly": 0,
+    "baseAnnual": 0,
+    "special": false,
+    "subPackages": null,
+    "genderRestriction": "",
+    "minAge": 11,
+    "maxAge": 98,
+    "pricing": [
+      {
+        "ageFrom": 11,
+        "ageTo": 15,
+        "female": 18200.0,
+        "male": 20200.0
+      },
+      {
+        "ageFrom": 16,
+        "ageTo": 20,
+        "female": 19100.0,
+        "male": 16500.0
+      },
+      {
+        "ageFrom": 21,
+        "ageTo": 25,
+        "female": 21500.0,
+        "male": 16900.0
+      },
+      {
+        "ageFrom": 26,
+        "ageTo": 30,
+        "female": 21800.0,
+        "male": 18300.0
+      },
+      {
+        "ageFrom": 31,
+        "ageTo": 35,
+        "female": 22700.0,
+        "male": 18900.0
+      },
+      {
+        "ageFrom": 36,
+        "ageTo": 40,
+        "female": 25100.0,
+        "male": 20800.0
+      },
+      {
+        "ageFrom": 41,
+        "ageTo": 45,
+        "female": 27800.0,
+        "male": 23800.0
+      },
+      {
+        "ageFrom": 46,
+        "ageTo": 50,
+        "female": 30400.0,
+        "male": 26700.0
+      },
+      {
+        "ageFrom": 51,
+        "ageTo": 55,
+        "female": 35200.0,
+        "male": 35000.0
+      },
+      {
+        "ageFrom": 56,
+        "ageTo": 59,
+        "female": 42500.0,
+        "male": 42300.0
+      },
+      {
+        "ageFrom": 60,
+        "ageTo": 65,
+        "female": 50800.0,
+        "male": 50600.0
+      },
+      {
+        "ageFrom": 66,
+        "ageTo": 70,
+        "female": 74000.0,
+        "male": 72100.0
+      },
+      {
+        "ageFrom": 71,
+        "ageTo": 75,
+        "female": 107500.0,
+        "male": 104000.0
+      },
+      {
+        "ageFrom": 76,
+        "ageTo": 80,
+        "female": 154400.0,
+        "male": 150000.0
+      },
+      {
+        "ageFrom": 81,
+        "ageTo": 85,
+        "female": 223400.0,
+        "male": 217100.0
+      },
+      {
+        "ageFrom": 86,
+        "ageTo": 90,
+        "female": 256900.0,
+        "male": 249700.0
+      },
+      {
+        "ageFrom": 91,
+        "ageTo": 95,
+        "female": 295400.0,
+        "male": 287200.0
+      },
+      {
+        "ageFrom": 96,
+        "ageTo": 98,
+        "female": 339700.0,
+        "male": 330300.0
+      }
+    ]
+  }
+]
