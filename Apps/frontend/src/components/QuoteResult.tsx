@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Calendar, Share2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
+import { calculateTieredPremium, getPricingTiersFromPackage } from '@/utils/premiumCalculator';
 
 interface QuoteResultProps {
   formData: {
@@ -20,6 +21,7 @@ interface QuoteResultProps {
     quarterly: number;
     semiAnnual: number;
     annual: number;
+    total: number;
   };
   selectedPackages: Array<{
     id: string;
@@ -163,7 +165,7 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
                           <div key={pkg.id} className="bg-brand-gold/10 p-3 rounded-lg border border-brand-gold/20">
                             <div className="font-bold text-brand-green">{pkg.name}</div>
                             <div className="text-sm text-gray-600">
-                              ความคุ้มครอง: ฿{pkg.coverage.toLocaleString()} บาท
+                              ความคุ้มครอง: {pkg.coverage.toLocaleString()} บาท
                             </div>
                             <div className="text-brand-gold font-bold text-sm">
                               +฿{pkg.premium.toLocaleString()} บาท/ปี
@@ -215,10 +217,10 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
 
               <div className="text-center p-4 bg-gradient-to-r from-brand-gold to-brand-gold/80 rounded-lg text-white">
                 <div className="text-xl font-bold">
-                  เบี้ยประกันต่อวัน: ฿{Math.round(premium.annual / 365).toLocaleString()}
+                  เบี้ยประกันรวม: ฿{Math.round(premium.total).toLocaleString()}
                 </div>
                 <div className="text-sm opacity-90 mt-1">
-                  (คำนวณจากเบี้ยประกันรายปี ÷ 365 วัน)
+                  (คำนวณราคาตั้งแต่เริ่มต้นจนกระทั่งถึงอายุตามสัญญา)
                 </div>
               </div>
             </div>

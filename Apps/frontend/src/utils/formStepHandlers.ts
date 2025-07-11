@@ -5,6 +5,7 @@ export const createFormStepHandlers = ({
   stepData,
   setStepData,
   setCurrentStep,
+  currentStep,
   setShowResult,
   setCalculatedPremium,
   setSelectedPackages,
@@ -85,8 +86,8 @@ export const createFormStepHandlers = ({
     },
 
     goBackStep: () => {
-      if (typeof stepData.currentStep === 'number' && stepData.currentStep > 0) {
-        setCurrentStep((prev: number) => prev - 1);
+      if (typeof currentStep  === 'number' && currentStep  > 0) {
+        setCurrentStep(currentStep - 1);
       }
     },
   };

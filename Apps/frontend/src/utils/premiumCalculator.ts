@@ -4,12 +4,21 @@ export interface PricingTier {
   price: number;
 }
 
+export interface PremiumResult {
+  total: number;         // หากมีมากกว่า 1 ปีจะคิดรวม
+  annual: number;        
+  semiAnnual: number;    
+  quarterly: number;     
+  monthly: number;       
+}
+
 export const calculateTieredPremium = (
   startAge: number,
   endAge: number,
   tiers: PricingTier[]
-): number => {
+): PremiumResult => {
   let total = 0;
+  let totalYears = 0;
 
   for (const tier of tiers) {
     const overlapStart = Math.max(startAge, tier.ageFrom);
@@ -18,10 +27,19 @@ export const calculateTieredPremium = (
 
     if (yearsInTier > 0) {
       total += tier.price * yearsInTier;
+      totalYears += yearsInTier;
     }
   }
 
-  return total;
+  const annual = totalYears > 0 ? total / totalYears : 0;
+
+  return {
+    total,
+    annual: Math.round(annual),
+    semiAnnual: Math.round(annual / 2),
+    quarterly: Math.round(annual / 4),
+    monthly: Math.round(annual / 12),
+  };
 };
 
 export const getPricingTiersFromPackage = (

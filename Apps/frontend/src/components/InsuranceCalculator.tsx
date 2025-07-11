@@ -12,6 +12,7 @@ import Step2 from '@/components/steps/Step2';
 import Step3 from '@/components/steps/Step3';
 import { createFormStepHandlers } from '@/utils/formStepHandlers';
 import { calculateTieredPremium, getPricingTiersFromPackage } from '@/utils/premiumCalculator';
+import { parseCoverageFromText } from '@/utils/ParserHandler';
 
 interface CalculatorData {
   gender: string;
@@ -27,17 +28,6 @@ interface StepData {
   selectedPlan: string;
   searchResults: any;
   savedData: any;
-}
-
-interface SubPlan {
-  id: string;
-  name: string;
-  coverage: string;
-  monthlyPremium: number;
-  annualPremium: number;
-  minAge: number;
-  maxAge: number;
-  genderRestriction?: 'male' | 'female' | null;
 }
 
 interface SelectedPackage {
@@ -176,6 +166,7 @@ const {
   setFormData,
   stepData,
   setStepData,
+  currentStep,
   setCurrentStep,
   setShowResult,
   setCalculatedPremium,
@@ -185,57 +176,57 @@ const {
   toast
 });
 
-// FIXME: ไม่จำเป็นต้องใช้ในอนาคต
-  const calculatePremium = () => {
-    if (!formData.gender || !formData.currentAge || !formData.coverageAge || 
-        formData.packages.length === 0 || formData.plans.length === 0) {
-      toast({
-        title: "ข้อมูลไม่ครบ",
-        description: "กรุณากรอกข้อมูลให้ครบถ้วน",
-        variant: "destructive",
-      });
-      return;
-    }
+const calculatePremium = () => {
+  const { gender, currentAge, coverageAge } = formData;
 
-    const mockPremium = {
-      monthly: Math.floor(Math.random() * 5000) + 1000,
-      quarterly: 0,
-      semiAnnual: 0,
-      annual: 0
-    };
-    mockPremium.quarterly = Math.round(mockPremium.monthly * 3 * 1.02);
-    mockPremium.semiAnnual = Math.round(mockPremium.monthly * 6 * 1.01);
-    mockPremium.annual = mockPremium.monthly * 12;
-
-    setCalculatedPremium(mockPremium);
-    setShowResult(true);
-    
+  if (!gender || !currentAge || !stepData.selectedPackage) {
     toast({
-      title: "คำนวณสำเร็จ",
-      description: "พบเบี้ยประกันที่เหมาะสมแล้ว",
+      title: "ข้อมูลไม่ครบ",
+      description: "กรุณากรอกเพศ อายุ และเลือกแพ็กเกจ",
+      variant: "destructive",
     });
-  };
-
-  // Premium Calculator
-  const selectedPackageName = stepData.selectedPackage;
-  const pkg = packagesData.find(p => p.name === selectedPackageName);
-
-  const gender = formData.gender as 'male' | 'female';
-  const currentAge = parseInt(formData.currentAge);
-  const coverageAge = parseInt(formData.coverageAge);
-
-  if (pkg && gender && currentAge && coverageAge) {
-    const tiers = getPricingTiersFromPackage(pkg, gender);
-    const totalPremium = calculateTieredPremium(currentAge, coverageAge, tiers);
-
-    console.log("💰 เบี้ยรวมตามช่วงอายุ:", totalPremium.toLocaleString());
+    return;
   }
+
+  const startAge = parseInt(currentAge, 10);
+  const endAge = coverageAge ? parseInt(coverageAge, 10) : startAge;
+
+  const pkg = packagesData.find(p => p.name === stepData.selectedPackage);
+  if (!pkg) {
+    toast({
+      title: "ไม่พบแพ็กเกจ",
+      description: "ไม่สามารถค้นหาแพ็กเกจที่เลือกได้",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  const pricingTiers = getPricingTiersFromPackage(pkg, gender as 'male' | 'female');
+  const premium = calculateTieredPremium(startAge, endAge, pricingTiers);
+
+  setCalculatedPremium(premium);
+  setShowResult(true);
+
+  toast({
+    title: "คำนวณสำเร็จ",
+    description: "พบเบี้ยประกันที่เหมาะสมแล้ว",
+  });
+};
+
+
 
   // Render Step-by-steps เราใช้ case มาช่วยในการทำ
   /* Multi-step flow  */
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
+      /* HACK: ปัญหาการแสดงข้อมูล <Packages> <plan> 
+      *  ซึ่งความเป็นจริงไม่ควรจะแสดง <plan> 
+      *
+      * NOTE: หากผู้ใช้ไม่ได้ใส่ข้อมูลดังต่อไปนี้ข้อมูลควรที่จะยังสามารถแสดงได้
+      * สามารถทำงานได้ : เพศ (gender) กับ ความคุ้มครองจนถึงอายุ (CoverageAge)
+      * ผลลัพธ์        : package -> plan (price.male/price.female)
+      */
       const eligiblePackages = getEligiblePackages();
       return (
         <Step1
@@ -254,19 +245,40 @@ const {
           goBack={goBackStep}
         />);
       case 3:
-        return (
-        <Step3
-          searchResults={stepData.searchResults}
-          saved={!!stepData.savedData}
-          onSave={handleSave}
-          goBack={goBackStep}
-        />
-      );
-      default:
-        return null;
-    }
-  };
+        
+          /**
+           * ตรวจสอบข้อมูลที่จำเป็นต้องใช้ในขั้นตอนที่ 3 (Step3) ดึงข้อมูลที่ผู้ใช้เลือกมาซึ่งเป็น object
+           * ทำการแปลงข้อมูล เพศกับช่วงอายุให้เรียบร้อย
+           */
+          
+          const selectedPackageName = stepData.selectedPackage;
+          const pkg = packagesData.find(p => p.name === selectedPackageName);
 
+          const gender = formData.gender as 'male' | 'female';
+          const currentAge = parseInt(formData.currentAge);
+          const coverageAge = formData.coverageAge ? parseInt(formData.coverageAge) : currentAge;
+
+        return (
+          // TODO: สรุปข้อมูลที่ลูกค้าได้กรอกไปทั้งหมด
+          pkg && gender && currentAge && coverageAge ? (
+            <Step3
+            selectedPackage={pkg}
+            startAge={currentAge}
+            endAge={coverageAge}
+            gender={gender}
+            saved={!!stepData.savedData}
+            onSave={handleSave}
+            goBack={goBackStep}
+            />
+          ) : (
+            <p className="text-red-500">ข้อมูลไม่ครบ ไม่สามารถแสดงเบี้ยประกันได้</p>
+          )
+        );
+        default:
+          return null;
+        }
+      };
+      
   return (
     <section id="calculator" className="py-8 bg-gray-50">
       <div className="container mx-auto px-3">
@@ -400,16 +412,6 @@ const {
                       <Shield className="w-5 h-5" />
                       <span className="text-xs">เลือกแผน</span>
                     </Button>
-                    {/* (version 1.1.0)
-                    <Button 
-                      variant="outline" 
-                      className="h-16 flex-col gap-1" 
-                      disabled
-                    >
-                      <Search className="w-5 h-5" />
-                      <span className="text-xs">ค้นหา</span>
-                    </Button>
-                    */}
                     <Button 
                       variant="outline" 
                       className="h-16 flex-col gap-1" 
@@ -430,6 +432,10 @@ const {
               </div>
 
               {/* Action Buttons */}
+
+            {/* HACK: ปัญหาเมื่อเราไม่ใส่ข้อมูล CoverageAge ปุ่ม "คำนวณเบี้ยประกัน" ไม่สามารถทำงานได้
+              * แนวทางการแก้ไข : เรากำหนดให้ค่าของ parseInt(formData.CoverageAge) ? CoverageAge : CurrentAge
+            */}
   
               <div className="space-y-3 pt-4 border-t">
                 <Button 
@@ -455,19 +461,31 @@ const {
           </Card>
 
           {/* Results */}
-          {showResult && calculatedPremium && (
-            <QuoteResult 
-              formData={formData}
-              premium={calculatedPremium}
-              selectedPackages={[{
-                id: '1',
-                name: stepData.selectedPackage || 'แพ็กเกจที่เลือก',
-                coverage: 1000000,
-                premium: calculatedPremium.monthly
-              }]}
-              selectedPlans={[]}
-            />
-          )}
+
+          {/*TODO: แก้ไขวิธีการคำนวณจาก Hard-code ในที่นี้คือ calculatedPremium -> permiumCalculator 
+           * 
+           */}
+           
+          {
+  showResult && calculatedPremium && (() => {
+    const packageName = stepData.selectedPackage || 'แพ็กเกจที่เลือก';
+    const coverage = parseCoverageFromText(packageName) ?? 0;
+
+    return (
+      <QuoteResult 
+        formData={formData}
+        premium={calculatedPremium}
+        selectedPackages={[{
+          id: '1',
+          name: packageName,
+          coverage: coverage,
+          premium: calculatedPremium.annual
+        }]}
+        selectedPlans={[]}
+      />
+    );
+  })()
+}
         </div>
       </div>
     </section>
