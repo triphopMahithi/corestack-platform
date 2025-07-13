@@ -1,14 +1,19 @@
 package database
 
 import (
+	"backend/models"
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+var Client *mongo.Client
+var UserCollection *mongo.Collection
 
 func ConnectToMongoDB(uri string) (*mongo.Client, error) {
 	clientOptions := options.Client().ApplyURI(uri)
@@ -37,4 +42,25 @@ func GetAllDocuments(collection *mongo.Collection) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, results)
 	}
+}
+
+func SaveOrUpdateUserWithTimestamp(user models.User, collection *mongo.Collection) error {
+	now := time.Now()
+
+	filter := bson.M{"lineUserId": user.LineUserID}
+	update := bson.M{
+		"$set": bson.M{
+			"username":  user.Username,
+			"role":      user.Role,
+			"updatedAt": now,
+			"lastLogin": now,
+		},
+		"$setOnInsert": bson.M{
+			"createdAt": now,
+		},
+	}
+
+	opts := options.Update().SetUpsert(true)
+	_, err := collection.UpdateOne(context.TODO(), filter, update, opts)
+	return err
 }

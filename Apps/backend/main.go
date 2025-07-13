@@ -5,6 +5,7 @@ import (
 	"backend/database"
 	"backend/handlers"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -18,14 +19,15 @@ func main() {
 		log.Fatal("MongoDB connection error", err)
 	}
 	db := client.Database(cfg.MongoDBName)
+	database.UserCollection = db.Collection("users")
 
 	// Gin setup
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:8081", "http://192.168.3.58:8081", "https://f4ddb5204500.ngrok-free.app"}, // ใส่ origin ของ frontend
+		AllowOrigins:     []string{"http://localhost:8081", "http://192.168.3.58:8081"}, // ใส่ origin ของ frontend
 		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
@@ -34,6 +36,20 @@ func main() {
 	api := r.Group("/api")
 	api.GET("/categories", handlers.GetCategoriesHandler(db))
 	api.GET("/packages", handlers.GetPackagesHandler(db))
+	authHandler := handlers.NewAuthHandler(cfg)
+	api.GET("/auth/login/line", authHandler.LineLoginHandler)
+	api.GET("/auth/callback", authHandler.HandleCallback)
+
+	api.GET("/profile", handlers.AuthMiddleware(), func(c *gin.Context) {
+		userId, _ := c.Get("userId")
+		role, _ := c.Get("role")
+
+		c.JSON(http.StatusOK, gin.H{
+			"userId": userId,
+			"role":   role,
+		})
+	})
+	api.GET("/me", authHandler.GetMe)
 
 	r.Run(":" + cfg.Port)
 }

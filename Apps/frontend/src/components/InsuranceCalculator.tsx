@@ -85,31 +85,31 @@ const InsuranceCalculator = () => {
   const { toast } = useToast();
   // Loading API 
   /* เชื่อมโยงจาก Frontend-to-Backend โดยใช้ res ไปยัง PORT:8080 (Go lang) backend */
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      // ดึงทั้ง packages และ categories พร้อมกัน
-      const [pkgRes, catRes] = await Promise.all([
-        fetch('http://localhost:8080/api/packages'),
-        fetch('http://localhost:8080/api/categories')
-      ]);
-
-      const packages = await pkgRes.json();
-      const categories = await catRes.json();
-
-      setPackagesData(packages); // array ของแพ็กเกจ
-
-      // แปลง category array ให้เป็น object: { categoryId: [packageId, ...] }
-      const categoryMap: Record<string, string[]> = {};
-      categories.forEach((cat: any) => {
-        categoryMap[cat.id] = cat.packages;
-      });
-      setCategoriesData(categoryMap);
-
-    } catch (err) {
-      console.error("Error fetching data:", err);
-    }
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // ดึงทั้ง packages และ categories พร้อมกัน
+        const [pkgRes, catRes] = await Promise.all([
+          fetch('http://localhost:8080/api/packages'),
+          fetch('http://localhost:8080/api/categories')
+        ]);
+      
+        const packages = await pkgRes.json();
+        const categories = await catRes.json();
+      
+        setPackagesData(packages); // array ของแพ็กเกจ
+      
+        // แปลง category array ให้เป็น object: { categoryId: [packageId, ...] }
+        const categoryMap: Record<string, string[]> = {};
+        categories.forEach((cat: any) => {
+          categoryMap[cat.id] = cat.packages;
+        });
+        setCategoriesData(categoryMap);
+      
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      }
+    };
 
   fetchData();
 }, []);

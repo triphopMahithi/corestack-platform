@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Settings, Save, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
+import axios from 'axios';
 
 interface PackagePrice {
   packageName: string;
@@ -20,7 +21,7 @@ interface PackagePrice {
 const Admin = () => {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
-  
+
   // Redirect if not admin
   if (!isAdmin) {
     return <Navigate to="/" replace />;
@@ -70,7 +71,6 @@ const Admin = () => {
     'AIA Total Care',
     'Accident Coverage'
   ];
-
   const handleSavePrice = () => {
     if (!selectedPackage || !monthlyPrice || !annualPrice) {
       toast({

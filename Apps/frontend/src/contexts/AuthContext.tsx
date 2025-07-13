@@ -1,5 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
+
 
 interface User {
   username: string;
@@ -15,10 +15,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_CREDENTIALS = {
-  username: 'aabbcc',
-  password: '11233'
-};
+// const ADMIN_CREDENTIALS = {
+//   username: 'aabbcc',
+//   password: '11233'
+// };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -30,25 +30,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
-    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-      const adminUser: User = { username, role: 'admin' };
-      setUser(adminUser);
-      localStorage.setItem('currentUser', JSON.stringify(adminUser));
-      return true;
-    }
-    
-    // For demo purposes, any other credentials create a regular user
-    if (username && password) {
-      const regularUser: User = { username, role: 'user' };
-      setUser(regularUser);
-      localStorage.setItem('currentUser', JSON.stringify(regularUser));
-      return true;
-    }
-    
-    return false;
-  };
-
+const login = async (
+  username: string,
+  password: string,
+  role: 'admin' | 'user' = 'user'
+): Promise<boolean> => {
+  const user: User = { username, role };
+  setUser({ username, role });
+  localStorage.setItem('currentUser', JSON.stringify(user));
+  return true;
+};
   const logout = () => {
     setUser(null);
     localStorage.removeItem('currentUser');

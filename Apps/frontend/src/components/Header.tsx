@@ -5,15 +5,18 @@ import { Calculator, Settings, LogIn, LogOut, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import EnhancedLoginModal from './EnhancedLoginModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const { user, logout, isAdmin } = useAuth();
-
+  const navigate = useNavigate();
   const handleLogout = () => {
     logout();
+    navigate("/"); 
   };
-
+  console.log("user.role:", user?.role);
+  console.log("isAdmin:", isAdmin);
   return (
     <>
       <header className="bg-white shadow-sm border-b border-brand-green/20">
@@ -41,7 +44,7 @@ const Header = () => {
                     <span className="text-sm text-brand-green font-medium">
                       {user.username}
                     </span>
-                    {user.role === 'admin' && (
+                    {user?.role === 'admin' && (
                       <span className="text-xs bg-brand-gold text-white px-2 py-1 rounded-full">
                         Admin
                       </span>

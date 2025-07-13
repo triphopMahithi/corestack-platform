@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -53,6 +52,9 @@ const EnhancedLoginModal: React.FC<EnhancedLoginModalProps> = ({ isOpen, onClose
       setIsLoading(false);
     }
   };
+const handleLineLogin = () => {
+  window.location.href = "http://localhost:8080/api/auth/login/line";
+};
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -126,6 +128,21 @@ const EnhancedLoginModal: React.FC<EnhancedLoginModalProps> = ({ isOpen, onClose
         </form>
 
         <div className="text-center text-xs text-gray-500 mt-4 p-3 bg-gray-50 rounded-lg">
+            <div className="pt-2">
+                  <Button
+                    type="button"
+                    onClick={handleLineLogin}
+                    variant="outline"
+                    className="w-full flex items-center justify-center gap-2 border-green-500 text-green-600 hover:bg-green-50"
+                  >
+                    <img
+                      src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg"
+                      alt="LINE"
+                      className="w-5 h-5"
+                    />
+                    เข้าสู่ระบบด้วย LINE
+                  </Button>
+                </div>
           <p className="font-medium mb-1">ข้อมูลทดสอบ:</p>
           <p>Admin: aabbcc / 11233</p>
           <p>User: ชื่อใดก็ได้ / รหัสใดก็ได้</p>
