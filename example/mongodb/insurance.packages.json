@@ -1,0 +1,1101 @@
+[{
+  "_id": {
+    "$oid": "686b6150eabae81065e916cf"
+  },
+  "id": "care-for-cancer",
+  "name": "Care for Cancer",
+  "categoryId": "critical",
+  "baseMonthly": 0,
+  "baseAnnual": 0,
+  "special": false,
+  "subPackages": null,
+  "genderRestriction": "",
+  "minAge": 15,
+  "maxAge": 79,
+  "pricing": [
+    {
+      "ageFrom": 15,
+      "ageTo": 15,
+      "female": 119.51,
+      "male": 119.51
+    },
+    {
+      "ageFrom": 16,
+      "ageTo": 20,
+      "female": 139.33,
+      "male": 135.16
+    },
+    {
+      "ageFrom": 21,
+      "ageTo": 25,
+      "female": 182.5,
+      "male": 155.84
+    },
+    {
+      "ageFrom": 26,
+      "ageTo": 30,
+      "female": 253.4,
+      "male": 189.26
+    },
+    {
+      "ageFrom": 31,
+      "ageTo": 35,
+      "female": 375.68,
+      "male": 253.51
+    },
+    {
+      "ageFrom": 36,
+      "ageTo": 40,
+      "female": 462.17,
+      "male": 386.81
+    },
+    {
+      "ageFrom": 41,
+      "ageTo": 45,
+      "female": 669.69,
+      "male": 512.13
+    },
+    {
+      "ageFrom": 46,
+      "ageTo": 50,
+      "female": 921.1,
+      "male": 800.92
+    },
+    {
+      "ageFrom": 51,
+      "ageTo": 55,
+      "female": 1247.1,
+      "male": 1282.87
+    },
+    {
+      "ageFrom": 56,
+      "ageTo": 60,
+      "female": 1774.95,
+      "male": 1869.36
+    },
+    {
+      "ageFrom": 61,
+      "ageTo": 65,
+      "female": 2115.73,
+      "male": 2876.04
+    },
+    {
+      "ageFrom": 66,
+      "ageTo": 70,
+      "female": 3143.33,
+      "male": 4676.21
+    },
+    {
+      "ageFrom": 71,
+      "ageTo": 75,
+      "female": 3834.44,
+      "male": 6152.96
+    },
+    {
+      "ageFrom": 76,
+      "ageTo": 79,
+      "female": 4591.68,
+      "male": 7639.52
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "686dec0225b53bf96f6eacd7"
+  },
+  "id": "health-happy-kids-15m",
+  "name": "Health Happy Kids 15M",
+  "categoryId": "Additional contract",
+  "baseMonthly": 0,
+  "baseAnnual": 0,
+  "special": false,
+  "subPackages": null,
+  "genderRestriction": "",
+  "minAge": 11,
+  "maxAge": 98,
+  "pricing": [
+    {
+      "ageFrom": 11,
+      "ageTo": 15,
+      "female": 21600,
+      "male": 25500
+    },
+    {
+      "ageFrom": 16,
+      "ageTo": 20,
+      "female": 23100,
+      "male": 20100
+    },
+    {
+      "ageFrom": 21,
+      "ageTo": 25,
+      "female": 27000,
+      "male": 21600
+    },
+    {
+      "ageFrom": 26,
+      "ageTo": 30,
+      "female": 30600,
+      "male": 26100
+    },
+    {
+      "ageFrom": 31,
+      "ageTo": 35,
+      "female": 34200,
+      "male": 29400
+    },
+    {
+      "ageFrom": 36,
+      "ageTo": 40,
+      "female": 37200,
+      "male": 31800
+    },
+    {
+      "ageFrom": 41,
+      "ageTo": 45,
+      "female": 42900,
+      "male": 36000
+    },
+    {
+      "ageFrom": 46,
+      "ageTo": 50,
+      "female": 46500,
+      "male": 40200
+    },
+    {
+      "ageFrom": 51,
+      "ageTo": 55,
+      "female": 50700,
+      "male": 50100
+    },
+    {
+      "ageFrom": 56,
+      "ageTo": 59,
+      "female": 65100,
+      "male": 63900
+    },
+    {
+      "ageFrom": 60,
+      "ageTo": 65,
+      "female": 73500,
+      "male": 72300
+    },
+    {
+      "ageFrom": 66,
+      "ageTo": 70,
+      "female": 107100,
+      "male": 105000
+    },
+    {
+      "ageFrom": 71,
+      "ageTo": 75,
+      "female": 155700,
+      "male": 152100
+    },
+    {
+      "ageFrom": 76,
+      "ageTo": 80,
+      "female": 224700,
+      "male": 219900
+    },
+    {
+      "ageFrom": 81,
+      "ageTo": 85,
+      "female": 325500,
+      "male": 318300
+    },
+    {
+      "ageFrom": 86,
+      "ageTo": 90,
+      "female": 374400,
+      "male": 366000
+    },
+    {
+      "ageFrom": 91,
+      "ageTo": 95,
+      "female": 430500,
+      "male": 420900
+    },
+    {
+      "ageFrom": 96,
+      "ageTo": 98,
+      "female": 495000,
+      "male": 484200
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "686dec0225b53bf96f6eacd8"
+  },
+  "id": "health-happy-kids-1m",
+  "name": "Health Happy Kids 1M",
+  "categoryId": "Additional contract",
+  "baseMonthly": 0,
+  "baseAnnual": 0,
+  "special": false,
+  "subPackages": null,
+  "genderRestriction": "",
+  "minAge": 11,
+  "maxAge": 98,
+  "pricing": [
+    {
+      "ageFrom": 11,
+      "ageTo": 15,
+      "female": 14400,
+      "male": 16400
+    },
+    {
+      "ageFrom": 16,
+      "ageTo": 20,
+      "female": 15200,
+      "male": 13500
+    },
+    {
+      "ageFrom": 21,
+      "ageTo": 25,
+      "female": 17200,
+      "male": 13700
+    },
+    {
+      "ageFrom": 26,
+      "ageTo": 30,
+      "female": 17500,
+      "male": 14700
+    },
+    {
+      "ageFrom": 31,
+      "ageTo": 35,
+      "female": 18400,
+      "male": 15100
+    },
+    {
+      "ageFrom": 36,
+      "ageTo": 40,
+      "female": 20400,
+      "male": 17000
+    },
+    {
+      "ageFrom": 41,
+      "ageTo": 45,
+      "female": 22300,
+      "male": 19200
+    },
+    {
+      "ageFrom": 46,
+      "ageTo": 50,
+      "female": 24500,
+      "male": 21600
+    },
+    {
+      "ageFrom": 51,
+      "ageTo": 55,
+      "female": 28500,
+      "male": 28300
+    },
+    {
+      "ageFrom": 56,
+      "ageTo": 59,
+      "female": 34400,
+      "male": 34100
+    },
+    {
+      "ageFrom": 60,
+      "ageTo": 65,
+      "female": 41500,
+      "male": 40900
+    },
+    {
+      "ageFrom": 66,
+      "ageTo": 70,
+      "female": 60800,
+      "male": 59400
+    },
+    {
+      "ageFrom": 71,
+      "ageTo": 75,
+      "female": 88200,
+      "male": 85400
+    },
+    {
+      "ageFrom": 76,
+      "ageTo": 80,
+      "female": 126300,
+      "male": 122900
+    },
+    {
+      "ageFrom": 81,
+      "ageTo": 85,
+      "female": 182700,
+      "male": 177800
+    },
+    {
+      "ageFrom": 86,
+      "ageTo": 90,
+      "female": 210100,
+      "male": 204500
+    },
+    {
+      "ageFrom": 91,
+      "ageTo": 95,
+      "female": 241600,
+      "male": 235200
+    },
+    {
+      "ageFrom": 96,
+      "ageTo": 98,
+      "female": 277800,
+      "male": 270500
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "686dec0225b53bf96f6eacd9"
+  },
+  "id": "health-happy-kids-25m",
+  "name": "Health Happy Kids 25M",
+  "categoryId": "Additional contract",
+  "baseMonthly": 0,
+  "baseAnnual": 0,
+  "special": false,
+  "subPackages": null,
+  "genderRestriction": "",
+  "minAge": 11,
+  "maxAge": 98,
+  "pricing": [
+    {
+      "ageFrom": 11,
+      "ageTo": 15,
+      "female": 27900,
+      "male": 33400
+    },
+    {
+      "ageFrom": 16,
+      "ageTo": 20,
+      "female": 30300,
+      "male": 26200
+    },
+    {
+      "ageFrom": 21,
+      "ageTo": 25,
+      "female": 35300,
+      "male": 28000
+    },
+    {
+      "ageFrom": 26,
+      "ageTo": 30,
+      "female": 38000,
+      "male": 33800
+    },
+    {
+      "ageFrom": 31,
+      "ageTo": 35,
+      "female": 42300,
+      "male": 37800
+    },
+    {
+      "ageFrom": 36,
+      "ageTo": 40,
+      "female": 46000,
+      "male": 40900
+    },
+    {
+      "ageFrom": 41,
+      "ageTo": 45,
+      "female": 53600,
+      "male": 47300
+    },
+    {
+      "ageFrom": 46,
+      "ageTo": 50,
+      "female": 60700,
+      "male": 52400
+    },
+    {
+      "ageFrom": 51,
+      "ageTo": 55,
+      "female": 65500,
+      "male": 65300
+    },
+    {
+      "ageFrom": 56,
+      "ageTo": 59,
+      "female": 84600,
+      "male": 83000
+    },
+    {
+      "ageFrom": 60,
+      "ageTo": 65,
+      "female": 95700,
+      "male": 94100
+    },
+    {
+      "ageFrom": 66,
+      "ageTo": 70,
+      "female": 139300,
+      "male": 136700
+    },
+    {
+      "ageFrom": 71,
+      "ageTo": 75,
+      "female": 202000,
+      "male": 197800
+    },
+    {
+      "ageFrom": 76,
+      "ageTo": 80,
+      "female": 291800,
+      "male": 286300
+    },
+    {
+      "ageFrom": 81,
+      "ageTo": 85,
+      "female": 422700,
+      "male": 414700
+    },
+    {
+      "ageFrom": 86,
+      "ageTo": 90,
+      "female": 486100,
+      "male": 476900
+    },
+    {
+      "ageFrom": 91,
+      "ageTo": 95,
+      "female": 559000,
+      "male": 548400
+    },
+    {
+      "ageFrom": 96,
+      "ageTo": 98,
+      "female": 642900,
+      "male": 630700
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "686dec0225b53bf96f6eacda"
+  },
+  "id": "health-happy-kids-5m",
+  "name": "Health Happy Kids 5M",
+  "categoryId": "Additional contract",
+  "baseMonthly": 0,
+  "baseAnnual": 0,
+  "special": false,
+  "subPackages": null,
+  "genderRestriction": "",
+  "minAge": 11,
+  "maxAge": 98,
+  "pricing": [
+    {
+      "ageFrom": 11,
+      "ageTo": 15,
+      "female": 18200,
+      "male": 20200
+    },
+    {
+      "ageFrom": 16,
+      "ageTo": 20,
+      "female": 19100,
+      "male": 16500
+    },
+    {
+      "ageFrom": 21,
+      "ageTo": 25,
+      "female": 21500,
+      "male": 16900
+    },
+    {
+      "ageFrom": 26,
+      "ageTo": 30,
+      "female": 21800,
+      "male": 18300
+    },
+    {
+      "ageFrom": 31,
+      "ageTo": 35,
+      "female": 22700,
+      "male": 18900
+    },
+    {
+      "ageFrom": 36,
+      "ageTo": 40,
+      "female": 25100,
+      "male": 20800
+    },
+    {
+      "ageFrom": 41,
+      "ageTo": 45,
+      "female": 27800,
+      "male": 23800
+    },
+    {
+      "ageFrom": 46,
+      "ageTo": 50,
+      "female": 30400,
+      "male": 26700
+    },
+    {
+      "ageFrom": 51,
+      "ageTo": 55,
+      "female": 35200,
+      "male": 35000
+    },
+    {
+      "ageFrom": 56,
+      "ageTo": 59,
+      "female": 42500,
+      "male": 42300
+    },
+    {
+      "ageFrom": 60,
+      "ageTo": 65,
+      "female": 50800,
+      "male": 50600
+    },
+    {
+      "ageFrom": 66,
+      "ageTo": 70,
+      "female": 74000,
+      "male": 72100
+    },
+    {
+      "ageFrom": 71,
+      "ageTo": 75,
+      "female": 107500,
+      "male": 104000
+    },
+    {
+      "ageFrom": 76,
+      "ageTo": 80,
+      "female": 154400,
+      "male": 150000
+    },
+    {
+      "ageFrom": 81,
+      "ageTo": 85,
+      "female": 223400,
+      "male": 217100
+    },
+    {
+      "ageFrom": 86,
+      "ageTo": 90,
+      "female": 256900,
+      "male": 249700
+    },
+    {
+      "ageFrom": 91,
+      "ageTo": 95,
+      "female": 295400,
+      "male": 287200
+    },
+    {
+      "ageFrom": 96,
+      "ageTo": 98,
+      "female": 339700,
+      "male": 330300
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "686dec0725b53bf96f6eacdb"
+  },
+  "id": "health-saver-200k",
+  "name": "Health Saver 200K",
+  "categoryId": "Additional contract",
+  "baseMonthly": 0,
+  "baseAnnual": 0,
+  "special": false,
+  "subPackages": null,
+  "genderRestriction": "",
+  "minAge": 11,
+  "maxAge": 98,
+  "pricing": [
+    {
+      "ageFrom": 11,
+      "ageTo": 15,
+      "female": 8500,
+      "male": 10100
+    },
+    {
+      "ageFrom": 16,
+      "ageTo": 20,
+      "female": 7400,
+      "male": 7300
+    },
+    {
+      "ageFrom": 21,
+      "ageTo": 25,
+      "female": 8600,
+      "male": 6900
+    },
+    {
+      "ageFrom": 26,
+      "ageTo": 30,
+      "female": 9100,
+      "male": 7400
+    },
+    {
+      "ageFrom": 31,
+      "ageTo": 35,
+      "female": 9200,
+      "male": 7500
+    },
+    {
+      "ageFrom": 36,
+      "ageTo": 40,
+      "female": 10400,
+      "male": 8500
+    },
+    {
+      "ageFrom": 41,
+      "ageTo": 45,
+      "female": 12100,
+      "male": 10000
+    },
+    {
+      "ageFrom": 46,
+      "ageTo": 50,
+      "female": 14300,
+      "male": 11800
+    },
+    {
+      "ageFrom": 51,
+      "ageTo": 55,
+      "female": 15500,
+      "male": 15400
+    },
+    {
+      "ageFrom": 56,
+      "ageTo": 60,
+      "female": 20800,
+      "male": 20600
+    },
+    {
+      "ageFrom": 61,
+      "ageTo": 65,
+      "female": 27600,
+      "male": 27300
+    },
+    {
+      "ageFrom": 66,
+      "ageTo": 70,
+      "female": 37900,
+      "male": 37500
+    },
+    {
+      "ageFrom": 71,
+      "ageTo": 75,
+      "female": 54200,
+      "male": 53700
+    },
+    {
+      "ageFrom": 76,
+      "ageTo": 80,
+      "female": 77700,
+      "male": 76900
+    },
+    {
+      "ageFrom": 81,
+      "ageTo": 85,
+      "female": 111300,
+      "male": 110200
+    },
+    {
+      "ageFrom": 86,
+      "ageTo": 90,
+      "female": 122400,
+      "male": 121200
+    },
+    {
+      "ageFrom": 91,
+      "ageTo": 95,
+      "female": 134600,
+      "male": 133300
+    },
+    {
+      "ageFrom": 96,
+      "ageTo": 98,
+      "female": 148100,
+      "male": 146600
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "686dec0725b53bf96f6eacdc"
+  },
+  "id": "health-saver-300k",
+  "name": "Health Saver 300K",
+  "categoryId": "Additional contract",
+  "baseMonthly": 0,
+  "baseAnnual": 0,
+  "special": false,
+  "subPackages": null,
+  "genderRestriction": "",
+  "minAge": 11,
+  "maxAge": 98,
+  "pricing": [
+    {
+      "ageFrom": 11,
+      "ageTo": 15,
+      "female": 10500,
+      "male": 12300
+    },
+    {
+      "ageFrom": 16,
+      "ageTo": 20,
+      "female": 9700,
+      "male": 8700
+    },
+    {
+      "ageFrom": 21,
+      "ageTo": 25,
+      "female": 10600,
+      "male": 8400
+    },
+    {
+      "ageFrom": 26,
+      "ageTo": 30,
+      "female": 11300,
+      "male": 8900
+    },
+    {
+      "ageFrom": 31,
+      "ageTo": 35,
+      "female": 11700,
+      "male": 9300
+    },
+    {
+      "ageFrom": 36,
+      "ageTo": 40,
+      "female": 11900,
+      "male": 10200
+    },
+    {
+      "ageFrom": 41,
+      "ageTo": 45,
+      "female": 13800,
+      "male": 11400
+    },
+    {
+      "ageFrom": 46,
+      "ageTo": 50,
+      "female": 16000,
+      "male": 13000
+    },
+    {
+      "ageFrom": 51,
+      "ageTo": 55,
+      "female": 17200,
+      "male": 17200
+    },
+    {
+      "ageFrom": 56,
+      "ageTo": 60,
+      "female": 24400,
+      "male": 24200
+    },
+    {
+      "ageFrom": 61,
+      "ageTo": 65,
+      "female": 31300,
+      "male": 31000
+    },
+    {
+      "ageFrom": 66,
+      "ageTo": 70,
+      "female": 47600,
+      "male": 47100
+    },
+    {
+      "ageFrom": 71,
+      "ageTo": 75,
+      "female": 68100,
+      "male": 67400
+    },
+    {
+      "ageFrom": 76,
+      "ageTo": 80,
+      "female": 97600,
+      "male": 96600
+    },
+    {
+      "ageFrom": 81,
+      "ageTo": 85,
+      "female": 139900,
+      "male": 138500
+    },
+    {
+      "ageFrom": 86,
+      "ageTo": 90,
+      "female": 153900,
+      "male": 152400
+    },
+    {
+      "ageFrom": 91,
+      "ageTo": 95,
+      "female": 169300,
+      "male": 167600
+    },
+    {
+      "ageFrom": 96,
+      "ageTo": 98,
+      "female": 186200,
+      "male": 184400
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "686dec0725b53bf96f6eacdd"
+  },
+  "id": "health-saver-400k",
+  "name": "Health Saver 400K",
+  "categoryId": "Additional contract",
+  "baseMonthly": 0,
+  "baseAnnual": 0,
+  "special": false,
+  "subPackages": null,
+  "genderRestriction": "",
+  "minAge": 11,
+  "maxAge": 98,
+  "pricing": [
+    {
+      "ageFrom": 11,
+      "ageTo": 15,
+      "female": 14400,
+      "male": 16400
+    },
+    {
+      "ageFrom": 16,
+      "ageTo": 20,
+      "female": 12000,
+      "male": 10600
+    },
+    {
+      "ageFrom": 21,
+      "ageTo": 25,
+      "female": 14400,
+      "male": 10400
+    },
+    {
+      "ageFrom": 26,
+      "ageTo": 30,
+      "female": 17100,
+      "male": 13500
+    },
+    {
+      "ageFrom": 31,
+      "ageTo": 35,
+      "female": 18000,
+      "male": 14700
+    },
+    {
+      "ageFrom": 36,
+      "ageTo": 40,
+      "female": 18500,
+      "male": 15200
+    },
+    {
+      "ageFrom": 41,
+      "ageTo": 45,
+      "female": 21700,
+      "male": 17100
+    },
+    {
+      "ageFrom": 46,
+      "ageTo": 50,
+      "female": 23200,
+      "male": 18000
+    },
+    {
+      "ageFrom": 51,
+      "ageTo": 55,
+      "female": 25600,
+      "male": 24300
+    },
+    {
+      "ageFrom": 56,
+      "ageTo": 60,
+      "female": 31000,
+      "male": 30700
+    },
+    {
+      "ageFrom": 61,
+      "ageTo": 65,
+      "female": 47500,
+      "male": 47000
+    },
+    {
+      "ageFrom": 66,
+      "ageTo": 70,
+      "female": 66600,
+      "male": 65900
+    },
+    {
+      "ageFrom": 71,
+      "ageTo": 75,
+      "female": 95300,
+      "male": 94400
+    },
+    {
+      "ageFrom": 76,
+      "ageTo": 80,
+      "female": 136600,
+      "male": 135200
+    },
+    {
+      "ageFrom": 81,
+      "ageTo": 85,
+      "female": 195700,
+      "male": 193800
+    },
+    {
+      "ageFrom": 86,
+      "ageTo": 90,
+      "female": 225100,
+      "male": 222900
+    },
+    {
+      "ageFrom": 91,
+      "ageTo": 95,
+      "female": 258900,
+      "male": 256300
+    },
+    {
+      "ageFrom": 96,
+      "ageTo": 98,
+      "female": 297700,
+      "male": 294700
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "686dec0725b53bf96f6eacde"
+  },
+  "id": "health-saver-500k",
+  "name": "Health Saver 500K",
+  "categoryId": "Additional contract",
+  "baseMonthly": 0,
+  "baseAnnual": 0,
+  "special": false,
+  "subPackages": null,
+  "genderRestriction": "",
+  "minAge": 11,
+  "maxAge": 98,
+  "pricing": [
+    {
+      "ageFrom": 11,
+      "ageTo": 15,
+      "female": 18200,
+      "male": 20200
+    },
+    {
+      "ageFrom": 16,
+      "ageTo": 20,
+      "female": 15000,
+      "male": 13700
+    },
+    {
+      "ageFrom": 21,
+      "ageTo": 25,
+      "female": 18100,
+      "male": 13400
+    },
+    {
+      "ageFrom": 26,
+      "ageTo": 30,
+      "female": 21000,
+      "male": 16600
+    },
+    {
+      "ageFrom": 31,
+      "ageTo": 35,
+      "female": 22700,
+      "male": 18900
+    },
+    {
+      "ageFrom": 36,
+      "ageTo": 40,
+      "female": 25100,
+      "male": 20100
+    },
+    {
+      "ageFrom": 41,
+      "ageTo": 45,
+      "female": 26500,
+      "male": 21600
+    },
+    {
+      "ageFrom": 46,
+      "ageTo": 50,
+      "female": 29200,
+      "male": 24700
+    },
+    {
+      "ageFrom": 51,
+      "ageTo": 55,
+      "female": 34100,
+      "male": 30900
+    },
+    {
+      "ageFrom": 56,
+      "ageTo": 60,
+      "female": 40900,
+      "male": 40500
+    },
+    {
+      "ageFrom": 61,
+      "ageTo": 65,
+      "female": 57200,
+      "male": 56600
+    },
+    {
+      "ageFrom": 66,
+      "ageTo": 70,
+      "female": 81800,
+      "male": 81000
+    },
+    {
+      "ageFrom": 71,
+      "ageTo": 75,
+      "female": 117000,
+      "male": 115800
+    },
+    {
+      "ageFrom": 76,
+      "ageTo": 80,
+      "female": 167300,
+      "male": 165600
+    },
+    {
+      "ageFrom": 81,
+      "ageTo": 85,
+      "female": 239200,
+      "male": 236800
+    },
+    {
+      "ageFrom": 86,
+      "ageTo": 90,
+      "female": 275100,
+      "male": 272300
+    },
+    {
+      "ageFrom": 91,
+      "ageTo": 95,
+      "female": 316400,
+      "male": 313100
+    },
+    {
+      "ageFrom": 96,
+      "ageTo": 98,
+      "female": 363900,
+      "male": 360100
+    }
+  ]
+}]
