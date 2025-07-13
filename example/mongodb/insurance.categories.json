@@ -1,0 +1,51 @@
+[{
+  "_id": {
+    "$oid": "686b6ad1eabae81065e916d1"
+  },
+  "id": "additional",
+  "name": "สัญญาเพิ่มเติม",
+  "packages": [
+    "aia-ealth-happy-kids",
+    "aia-hs-new-standard",
+    "aia-hs-extra-new-standard",
+    "aia-health-saver",
+    "aia-health-happy",
+    "aia-infinite-care-new-standard",
+    "hb",
+    "aia-hb-extra",
+    "day-case-hb-hbextra"
+  ]
+},
+{
+  "_id": {
+    "$oid": "686b6ad1eabae81065e916d2"
+  },
+  "id": "critical",
+  "name": "ความคุ้มครองโรคร้ายแรง",
+  "packages": [
+    "aia-health-cancer",
+    "care-for-cancer",
+    "aia-ci-plus",
+    "aia-ci-top-up",
+    "multi-pay-ci-plus",
+    "aia-multi-pay-ci",
+    "aia-total-care",
+    "lady-care-lady-care-plus",
+    "aia-tpd"
+  ]
+},
+{
+  "_id": {
+    "$oid": "686b6ad1eabae81065e916d3"
+  },
+  "id": "accident",
+  "name": "ความคุ้มครองอุบัติเหตุ",
+  "packages": [
+    "adb-rcc",
+    "wp",
+    "pb",
+    "pbci",
+    "wpci",
+    "udr"
+  ]
+}]
