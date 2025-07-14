@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,6 +26,11 @@ func main() {
 	// Gin setup
 	r := gin.Default()
 
+	// Middleware สำหรับ session
+	store := cookie.NewStore([]byte(cfg.SECRET_KEY))
+	r.Use(sessions.Sessions("mysession", store))
+
+	// ✅ CORS
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:8081", "http://192.168.3.58:8081"}, // ใส่ origin ของ frontend
 		AllowMethods:     []string{"GET", "POST", "OPTIONS"},

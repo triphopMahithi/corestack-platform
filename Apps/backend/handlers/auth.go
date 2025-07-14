@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -29,8 +30,16 @@ func NewAuthHandler(cfg *config.Config) *AuthHandler {
 
 // GET /api/auth/login/line
 func (h *AuthHandler) LineLoginHandler(c *gin.Context) {
-	// #TODO: เพิ่มความปลอดภัยในการเข้ารหัส state โดยใช้ crypto เป็นต้น
-	state := "secure_random_state"
+	state := utils.GenerateSecureState()
+
+	// ✅ Step 2: เก็บ state ลง session
+	session := sessions.Default(c)
+	session.Set("oauthState", state)
+	if err := session.Save(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save session"})
+		return
+	}
+
 	authURL := fmt.Sprintf(
 		"https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=%s&redirect_uri=%s&state=%s&scope=%s",
 		h.Config.CHANNEL_ID,
@@ -73,57 +82,17 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 }
 
 // #TODO: เพื่อความปลอดภัยของผู้ใช้ควรทำ JWT กับ Middleware
-// func (h *AuthHandler) HandleCallback(c *gin.Context) {
-//
-// 	code := c.Query("code")
-// 	if code == "" {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing code"})
-// 		return
-// 	}
-//
-// 	// Step 1: ดึง access token จาก LINE
-// 	token, err := h.getAccessToken(code)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get token"})
-// 		return
-// 	}
-//
-// 	// Step 2: ดึง user profile จาก LINE ด้วย access token
-// 	profile, err := h.getUserProfile(token.AccessToken)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get profile"})
-// 		return
-// 	}
-//
-// 	// Step 3: เตรียมข้อมูลผู้ใช้แบบ struct
-// 	user := models.User{
-// 		Username:   profile.DisplayName,
-// 		LineUserID: profile.UserID,
-// 		Role:       "user", // ตั้งค่า role พื้นฐาน
-// 	}
-//
-// 	// Step 4: Save หรือ Update ลง MongoDB พร้อม timestamps
-// 	err = database.SaveOrUpdateUserWithTimestamp(user, database.UserCollection)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save user to database"})
-// 		return
-// 	}
-//
-// 	jwtToken, err := utils.GenerateJWT(profile.UserID, "user")
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-// 		return
-// 	}
-//
-// 	// Step 5: Redirect ไปยัง frontend (แนะนำให้ใช้ JWT หรือ session ถ้าระบบจริง)
-// 	// redirect พร้อม JWT token ไป frontend
-// 	//redirectURL := fmt.Sprintf("%s/login/success?token=%s", h.Config.FRONTEND_URL, jwtToken)
-// 	redirectURL := fmt.Sprintf("%s/login/success?token=%s&role=%s", h.Config.FRONTEND_URL, jwtToken, user.Role)
-// 	c.Redirect(http.StatusFound, redirectURL)
-//
-// }
-
 func (h *AuthHandler) HandleCallback(c *gin.Context) {
+
+	// ✅ ตรวจสอบ state ก่อน
+	session := sessions.Default(c)
+	storedState := session.Get("oauthState")
+	if storedState == nil || c.Query("state") != storedState {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state (CSRF protection)"})
+		return
+	}
+
+	// 🔐 หาก state ถูกต้อง → ทำขั้นตอน login ต่อไปได้ตามปกติ
 	code := c.Query("code")
 	if code == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing code"})
