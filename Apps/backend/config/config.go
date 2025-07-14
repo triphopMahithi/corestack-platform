@@ -15,6 +15,8 @@ type Config struct {
 	REDIRECT_URI              string
 	FRONTEND_URL              string
 	JWT_SECRET                string
+	JWT_ISSUER                string
+	JWT_AUDIENCE              string
 	OLLAMA_URL                string
 	OLLAMA_MODEL              string
 	MongoURI                  string
@@ -35,6 +37,8 @@ func LoadConfig() *Config {
 		REDIRECT_URI:              os.Getenv("REDIRECT_URI"),
 		FRONTEND_URL:              os.Getenv("FRONTEND_URL"),
 		JWT_SECRET:                os.Getenv("JWT_SECRET"),
+		JWT_ISSUER:                os.Getenv("JWT_ISSUER"),
+		JWT_AUDIENCE:              os.Getenv("JWT_AUDIENCE"),
 		OLLAMA_URL:                os.Getenv("OLLAMA_URL"),
 		OLLAMA_MODEL:              os.Getenv("OLLAMA_MODEL"),
 		MongoURI:                  os.Getenv("MONGO_URI"),
