@@ -7,7 +7,6 @@ This project is a Full-Stack Web Application designed to integrate various techn
 - [Installation](#installation)
 - [Usage](#usage)
 - [Contributing](#contributing)
-- [License](#license)
 - [Contact](#contact)
 
 ## Installation ⚙️
@@ -44,18 +43,18 @@ Then, move to the frontend directory and install NodeJS dependencies:
 cd ./line-chatbot/App/Apps/frontend
 npm install
 ```
-### Platform-specific Instructions 🌐
-## Windows 💻
+## Platform 🌐
+### Windows 💻
 To install on Windows, download the necessary file from the following link:
 
 [Download Windows Version](https://ollama.com/download)
 
-## Linux 🐧
+### Linux 🐧
 For Linux, use the following command to install:
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
 ```
-## macOS 🍎
+### macOS 🍎
 For macOS, you can download the required file here:
 
 [Download Windows Version](https://ollama.com/download)
