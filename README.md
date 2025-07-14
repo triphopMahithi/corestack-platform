@@ -75,4 +75,4 @@ Provide instructions on how to use the application, such as how to run the serve
 
 ## Supporters & Funding 💡
 
-Tranak Nitiwong - Anan.ip
+**Tranak Nitiwong** - anan.ip
