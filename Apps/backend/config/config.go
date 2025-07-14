@@ -22,6 +22,7 @@ type Config struct {
 	MongoURI                  string
 	MongoDBName               string
 	MongoCollection           string
+	SECRET_KEY                string
 	users                     string
 	Port                      string
 }
@@ -44,6 +45,7 @@ func LoadConfig() *Config {
 		MongoURI:                  os.Getenv("MONGO_URI"),
 		MongoDBName:               os.Getenv("MONGO_DB"),
 		MongoCollection:           os.Getenv("MONGO_DB_COLLECTION"),
+		SECRET_KEY:                os.Getenv("SECRET_KEY"),
 		users:                     os.Getenv("users"),
 		Port:                      os.Getenv("PORT"),
 	}
