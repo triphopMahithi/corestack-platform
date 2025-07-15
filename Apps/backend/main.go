@@ -15,6 +15,7 @@ import (
 )
 
 func main() {
+	// setup
 	cfg := config.LoadConfig()
 	client, err := database.ConnectToMongoDB(cfg.MongoURI)
 	if err != nil {
@@ -30,7 +31,7 @@ func main() {
 	store := cookie.NewStore([]byte(cfg.SECRET_KEY))
 	r.Use(sessions.Sessions("mysession", store))
 
-	// ✅ CORS
+	// Cross-origin resource sharing (CORS)
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:8081", "http://192.168.3.58:8081"}, // ใส่ origin ของ frontend
 		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
@@ -40,13 +41,24 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	// route
 	api := r.Group("/api")
+
+	// Show data
 	api.GET("/categories", handlers.GetCategoriesHandler(db))
 	api.GET("/packages", handlers.GetPackagesHandler(db))
+
+	// Query
+	api.POST("/packages", handlers.CreatePackageHandler(db))
+	api.POST("/packages/delete", handlers.DeletePackageHandler(db))
+
+	api.POST("/packages/add-pricing", handlers.AddPricingToPackageHandler(db))
+	api.POST("/packages/delete-pricing", handlers.DeletePricingFromPackageHandler(db))
+
+	// Authentication
 	authHandler := handlers.NewAuthHandler(cfg)
 	api.GET("/auth/login/line", authHandler.LineLoginHandler)
 	api.GET("/auth/callback", authHandler.HandleCallback)
-
 	api.GET("/profile", handlers.AuthMiddleware(), func(c *gin.Context) {
 		userId, _ := c.Get("userId")
 		role, _ := c.Get("role")
@@ -58,5 +70,6 @@ func main() {
 	})
 	api.GET("/me", authHandler.GetMe)
 
+	// Port
 	r.Run(":" + cfg.Port)
 }
