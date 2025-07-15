@@ -10,7 +10,6 @@ import { Settings, Save, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
-import axios from 'axios';
 
 interface PackagePrice {
   packageName: string;
@@ -18,15 +17,174 @@ interface PackagePrice {
   baseAnnual: number;
 }
 
+interface Pricing {
+  ageFrom: number;
+  ageTo: number;
+  female: number | string;
+  male: number | string;
+}
+
+interface NewPackage {
+  id: string;
+  name: string;
+  categoryId: string;
+  baseMonthly: number;
+  baseAnnual: number;
+  special: boolean;
+  genderRestriction: string;
+  minAge: number | string;
+  maxAge: number | string;
+  pricing: Pricing[];
+}
+
 const Admin = () => {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
+  const [newPackage, setNewPackage] = useState<NewPackage>({
+    id: '',
+    name: '',
+    categoryId: '',
+    baseMonthly: 0,
+    baseAnnual: 0,
+    special: false,
+    genderRestriction: '',
+    minAge: '',
+    maxAge: '',
+    pricing: [],
+  });
+
+  const [pricingInputs, setPricingInputs] = useState<{ ageFrom: number, ageTo: number, female: number, male: number }[]>([]);
+
+// ฟังก์ชันเพิ่มช่องกรอกข้อมูลราคาใหม่
+const addPricingInput = () => {
+  if (newPackage.minAge && newPackage.maxAge) {
+    // เพิ่มข้อมูลราคาโดยใช้ minAge และ maxAge ที่กรอก
+    setPricingInputs([
+      ...pricingInputs,
+      {
+        ageFrom: parseInt(newPackage.minAge as string), // ใช้ minAge ที่กรอก
+        ageTo: parseInt(newPackage.maxAge as string), // ใช้ maxAge ที่กรอก
+        female: 0,
+        male: 0,
+      }
+    ]);
+
+    // รีเซ็ตอายุขั้นต่ำและสูงสุดหลังจากเพิ่มราคา
+    setNewPackage({ ...newPackage, minAge: '', maxAge: '' }); // รีเซ็ตค่า minAge และ maxAge
+  } else {
+    toast({
+      title: 'ข้อมูลไม่ครบถ้วน',
+      description: 'กรุณากรอกอายุขั้นต่ำและสูงสุดให้ครบถ้วน',
+      variant: 'destructive',
+    });
+  }
+};
+
+  // ฟังก์ชันลบราคา
+  const removePricingInput = (index: number) => {
+    const updatedPricingInputs = [...pricingInputs];
+    updatedPricingInputs.splice(index, 1);
+    setPricingInputs(updatedPricingInputs);
+  };
+
+const handleSavePackage = () => {
+  if (!newPackage.id || !newPackage.name || !newPackage.categoryId || pricingInputs.length === 0) {
+    toast({
+      title: 'ข้อมูลไม่ครบถ้วน',
+      description: 'กรุณากรอกข้อมูลให้ครบถ้วน',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  // ตรวจสอบว่า minAge และ maxAge ไม่มีค่า หรือเป็น ''
+  let minAge = newPackage.minAge;
+  let maxAge = newPackage.maxAge;
+
+  if (minAge === '' || maxAge === '') {
+    // คำนวณค่า minAge และ maxAge จาก pricingInputs
+    if (pricingInputs.length > 0) {
+      minAge = Math.min(...pricingInputs.map(p => p.ageFrom)); // หาค่าน้อยที่สุดจาก ageFrom
+      maxAge = Math.max(...pricingInputs.map(p => p.ageTo)); // หาค่ามากที่สุดจาก ageTo
+    } else {
+      toast({
+        title: 'กรุณากรอกข้อมูลราคาให้ครบถ้วน',
+        description: 'กรุณากรอกข้อมูลอายุขั้นต่ำและสูงสุดก่อนที่จะบันทึกแพ็กเกจ',
+        variant: 'destructive',
+      });
+      return;
+    }
+  }
+
+  // รวมข้อมูลที่กรอกลงใน pricing
+  const newPricingData = pricingInputs.map(input => ({
+    ageFrom: input.ageFrom,
+    ageTo: input.ageTo,
+    female: input.female,
+    male: input.male,
+  }));
+
+  const packageToSave = { 
+    ...newPackage, 
+    minAge: parseInt(minAge as string), // แปลงเป็นตัวเลข
+    maxAge: parseInt(maxAge as string), // แปลงเป็นตัวเลข
+    pricing: newPricingData 
+  };
+    // ส่งข้อมูลใหม่ไปที่ backend (สมมุติว่าเป็น POST request)
+    fetch('http://localhost:8080/api/packages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(packageToSave),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to create package');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        toast({
+          title: 'บันทึกสำเร็จ',
+          description: `เพิ่มแพ็กเกจ ${newPackage.name} แล้ว`,
+        });
+        // รีเซ็ตข้อมูลหลังบันทึก
+        setNewPackage({
+          id: '',
+          name: '',
+          categoryId: '',
+          baseMonthly: 0,
+          baseAnnual: 0,
+          special: false,
+          genderRestriction: '',
+          minAge: '',
+          maxAge: '',
+          pricing: [],
+        });
+        setPricingInputs([]);
+      })
+      .catch((error) => {
+        toast({
+          title: 'เกิดข้อผิดพลาด',
+          description: error.message || 'ไม่สามารถเพิ่มแพ็กเกจได้',
+          variant: 'destructive',
+        });
+      });
+  };
+
+ // ฟังก์ชันจัดการการเปลี่ยนแปลงราคา
+const handlePricingChange = (index: number, field: string, value: string) => {
+    const updatedPricingInputs = [...pricingInputs];
+    // แปลงค่าเป็นตัวเลขเมื่อกรอกข้อมูล
+    updatedPricingInputs[index] = { ...updatedPricingInputs[index], [field]: value === '' ? '' : parseFloat(value) };
+    setPricingInputs(updatedPricingInputs);
+  };
 
   // Redirect if not admin
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
-
   const [selectedPackage, setSelectedPackage] = useState('');
   const [monthlyPrice, setMonthlyPrice] = useState('');
   const [annualPrice, setAnnualPrice] = useState('');
@@ -150,7 +308,7 @@ const Admin = () => {
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="pricing">จัดการราคา</TabsTrigger>
                 <TabsTrigger value="packages">จัดการแพ็กเกจ</TabsTrigger>
-                <TabsTrigger value="settings">ตั้งค่า</TabsTrigger>
+                <TabsTrigger value="settings">โปรโมชั่น</TabsTrigger>
               </TabsList>
 
               <TabsContent value="pricing" className="space-y-6">
@@ -235,7 +393,7 @@ const Admin = () => {
                   </CardContent>
                 </Card>
               </TabsContent>
-
+              {/* 
               <TabsContent value="packages">
                 <Card>
                   <CardHeader>
@@ -252,6 +410,110 @@ const Admin = () => {
                   </CardContent>
                 </Card>
               </TabsContent>
+              */}
+          <TabsContent value="packages">
+      <Card>
+        <CardHeader>
+          <CardTitle>จัดการแพ็กเกจ</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* ฟอร์มสำหรับกรอกข้อมูลแพ็กเกจ */}
+            <div className="space-y-2">
+              <Label htmlFor="packageId">ID แพ็กเกจ</Label>
+              <Input
+                id="packageId"
+                value={newPackage.id}
+                onChange={(e) => setNewPackage({ ...newPackage, id: e.target.value })}
+                placeholder="กรอก ID แพ็กเกจ"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="packageName">ชื่อแพ็กเกจ</Label>
+              <Input
+                id="packageName"
+                value={newPackage.name}
+                onChange={(e) => setNewPackage({ ...newPackage, name: e.target.value })}
+                placeholder="กรอกชื่อแพ็กเกจ"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="categoryId">หมวดหมู่</Label>
+              <Input
+                id="categoryId"
+                value={newPackage.categoryId}
+                onChange={(e) => setNewPackage({ ...newPackage, categoryId: e.target.value })}
+                placeholder="กรอกหมวดหมู่"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="minAge">อายุขั้นต่ำ</Label>
+              <Input
+                id="minAge"
+                type="number"
+                value={newPackage.minAge}
+                onChange={(e) => setNewPackage({ ...newPackage, minAge: parseInt(e.target.value) })}
+                placeholder="กรอกอายุขั้นต่ำ"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="maxAge">อายุสูงสุด</Label>
+              <Input
+                id="maxAge"
+                type="number"
+                value={newPackage.maxAge}
+                onChange={(e) => setNewPackage({ ...newPackage, maxAge: parseInt(e.target.value) })}
+                placeholder="กรอกอายุสูงสุด"
+              />
+            </div>
+
+            {/* ฟอร์มกรอกข้อมูลราคา */}
+            <div className="space-y-2">
+              <Button onClick={addPricingInput} className="brand-green" disabled={!(newPackage.minAge && newPackage.maxAge)}>
+                เพิ่มราคา
+              </Button>
+            </div>
+
+            {/* แสดงราคาที่เพิ่ม */}
+            <div>
+              {pricingInputs.map((input, index) => (
+                <div key={index} className="space-y-2 mb-4 p-4 border border-gray-300 rounded">
+                  <div>
+                    <Label>อายุ {input.ageFrom} ถึง {input.ageTo}</Label>
+                    <div className="flex gap-4">
+                      <Input
+                        type="number"
+                        value={input.female === 0 ? '' : input.female} // ใช้ค่าว่างถ้าไม่มีข้อมูล
+                        onChange={(e) => handlePricingChange(index, 'female', e.target.value)}
+                        placeholder="กรอกราคาเพศหญิง"
+                      />
+                      <Input
+                        type="number"
+                        value={input.male === 0 ? '' : input.male} // ใช้ค่าว่างถ้าไม่มีข้อมูล
+                        onChange={(e) => handlePricingChange(index, 'male', e.target.value)}
+                        placeholder="กรอกราคาเพศชาย"
+                      />
+                    </div>
+                  </div>
+
+                  {/* ปุ่มลบราคา */}
+                  <Button onClick={() => removePricingInput(index)} className="text-red-600 hover:text-red-700">
+                    <Trash2 className="w-4 h-4" />
+                    ลบราคา
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* ปุ่มบันทึกแพ็กเกจ */}
+            <Button onClick={handleSavePackage} className="brand-green">
+              <Plus className="w-4 h-4 mr-2" />
+              เพิ่มแพ็กเกจใหม่
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </TabsContent>
 
               <TabsContent value="settings">
                 <Card>
