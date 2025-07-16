@@ -34,7 +34,7 @@ func main() {
 	// Cross-origin resource sharing (CORS)
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:8081", "http://192.168.3.58:8081"}, // ใส่ origin ของ frontend
-		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "OPTIONS", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -55,6 +55,10 @@ func main() {
 	api.POST("/packages/add-pricing", handlers.AddPricingToPackageHandler(db))
 	api.POST("/packages/delete-pricing", handlers.DeletePricingFromPackageHandler(db))
 
+	r.GET("/api/promotions", handlers.GetPromotionsHandler(db))
+	r.POST("/api/promotions", handlers.AddPromotionHandler(db))
+	r.POST("/api/calculate-price", handlers.CalculatePriceHandler(db))
+	r.DELETE("/api/promotions/:id", handlers.DeletePromotionHandler(db))
 	// Authentication
 	authHandler := handlers.NewAuthHandler(cfg)
 	api.GET("/auth/login/line", authHandler.LineLoginHandler)
