@@ -6,6 +6,7 @@ import axios from 'axios';
 const LoginSuccess = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { loginWithUserData } = useAuth();
 
   useEffect(() => {
   const query = new URLSearchParams(window.location.search);
@@ -26,6 +27,8 @@ const LoginSuccess = () => {
     const { username, role } = res.data;
     console.log("LoginSuccess - role:", role);
     console.log("✅ /api/me response:", res.data);
+     // ✅ login ด้วยข้อมูลที่ได้จาก /api/me
+      loginWithUserData(res.data);
     login(username, '', role || 'user');// ← อัปเดต AuthContext ด้วย role ล่าสุดจาก DB
     navigate(role === "admin" ? "/admin" : "/");
   })
@@ -33,6 +36,9 @@ const LoginSuccess = () => {
     navigate("/");
   });
 }, []);
+
+
+
   return (
     <div className="flex items-center justify-center min-h-screen">
       <p className="text-gray-600 text-sm">กำลังเข้าสู่ระบบ กรุณารอสักครู่...</p>
