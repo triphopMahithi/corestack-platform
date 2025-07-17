@@ -36,6 +36,40 @@ func GetPackagesHandler(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
+func SearchPackagesHandler(db *mongo.Database) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		query := c.DefaultQuery("query", "") // รับค่าค้นหาจาก URL (เช่น `?query=health`)
+
+		// ใช้ regex ในการค้นหาชื่อแพ็กเกจ
+		filter := bson.M{
+			"name": bson.M{
+				"$regex":   query,
+				"$options": "i", // "i" คือการค้นหาที่ไม่สนใจตัวพิมพ์เล็ก/ใหญ่
+			},
+		}
+
+		// ค้นหาแพ็กเกจจากฐานข้อมูล
+		var results []models.Package
+		cursor, err := db.Collection("packages").Find(context.Background(), filter)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer cursor.Close(context.Background())
+
+		for cursor.Next(context.Background()) {
+			var p models.Package
+			if err := cursor.Decode(&p); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			results = append(results, p)
+		}
+
+		c.JSON(http.StatusOK, results)
+	}
+}
+
 // เพิ่มแพ็กเกจใหม่พร้อมการเรียงลำดับราคา
 func CreatePackageHandler(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -52,55 +86,53 @@ func CreatePackageHandler(db *mongo.Database) gin.HandlerFunc {
 			return newPackage.Pricing[i].AgeFrom < newPackage.Pricing[j].AgeFrom
 		})
 
-		// ตรวจสอบว่า ID ของแพ็กเกจมีอยู่แล้วในฐานข้อมูลหรือไม่
-		var existingPackage models.Package
-		err := db.Collection("packages").FindOne(c, bson.M{"id": newPackage.ID}).Decode(&existingPackage)
-		if err == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "แพ็กเกจนี้มีอยู่แล้ว"})
-			return
-		}
-
 		// บันทึกแพ็กเกจใหม่ลง MongoDB
-		_, err = db.Collection("packages").InsertOne(c, newPackage)
+		result, err := db.Collection("packages").InsertOne(context.Background(), newPackage)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเพิ่มแพ็กเกจได้"})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "เพิ่มแพ็กเกจใหม่สำเร็จ"})
+		// แปลง ObjectID เป็น string ก่อนส่งกลับ
+		newPackage.ID = result.InsertedID.(primitive.ObjectID)
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "เพิ่มแพ็กเกจใหม่สำเร็จ",
+			"package": newPackage,
+		})
 	}
 }
 
 // ฟังก์ชันลบแพ็กเกจตามชื่อ
 func DeletePackageHandler(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// รับค่าจาก Body
-		var requestData struct {
-			Name string `json:"name"` // ชื่อแพ็กเกจที่ต้องการลบ
-		}
-
-		// Bind ข้อมูล JSON ที่ส่งมาจาก client
-		if err := c.ShouldBindJSON(&requestData); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data"})
+		// รับค่า ID จาก URL
+		packageID := c.Param("id")
+		if packageID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Package ID is required"})
 			return
 		}
 
-		// ค้นหาแพ็กเกจที่ตรงกับชื่อ
-		var packageToDelete models.Package
-		err := db.Collection("packages").FindOne(c, bson.M{"name": requestData.Name}).Decode(&packageToDelete)
+		// แปลง string ID เป็น ObjectID
+		objectID, err := primitive.ObjectIDFromHex(packageID)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบแพ็กเกจที่มีชื่อ " + requestData.Name})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ObjectID"})
 			return
 		}
 
-		// ลบแพ็กเกจจาก MongoDB
-		_, err = db.Collection("packages").DeleteOne(c, bson.M{"name": requestData.Name})
+		// ลบแพ็กเกจจากฐานข้อมูล
+		result, err := db.Collection("packages").DeleteOne(context.Background(), bson.M{"_id": objectID})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถลบแพ็กเกจได้"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete package"})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "ลบแพ็กเกจสำเร็จ"})
+		if result.DeletedCount == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Package not found"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Package deleted successfully"})
 	}
 }
 
@@ -223,6 +255,46 @@ func DeletePricingFromPackageHandler(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
+// ฟังก์ชันสำหรับการลบโปรโมชั่น
+func DeleteOnePackage(db *mongo.Database) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// รับ promotionId จาก URL parameter
+		promotionID := c.Param("id")
+
+		// ตรวจสอบว่า promotionId ที่ส่งมามีค่า
+		if promotionID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Package ID is required"})
+			return
+		}
+
+		// แปลง promotionID จาก string เป็น primitive.ObjectID
+		id, err := primitive.ObjectIDFromHex(promotionID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Package ID format"})
+			return
+		}
+
+		// เชื่อมต่อกับ MongoDB collection ที่ชื่อ "promotions"
+		collection := db.Collection("packages")
+
+		// ลบโปรโมชั่นจากฐานข้อมูล
+		filter := bson.M{"_id": id}
+		result, err := collection.DeleteOne(context.Background(), filter)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete Package"})
+			return
+		}
+
+		if result.DeletedCount == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Package not found"})
+			return
+		}
+
+		// ส่งผลลัพธ์เมื่อการลบสำเร็จ
+		c.JSON(http.StatusOK, gin.H{"message": "Package deleted successfully"})
+	}
+}
+
 // ฟังก์ชันเพิ่มโปรโมชั่น
 func AddPromotionHandler(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -248,13 +320,17 @@ func AddPromotionHandler(db *mongo.Database) gin.HandlerFunc {
 
 		// สร้างโปรโมชั่นใหม่
 		collection := db.Collection("promotions")
-		_, err := collection.InsertOne(context.Background(), promotion)
+		result, err := collection.InsertOne(context.Background(), promotion)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert promotion"})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "Promotion added successfully"})
+		// เพิ่ม _id ที่ MongoDB สร้างให้ลงในข้อมูลโปรโมชั่น
+		promotion.ID = result.InsertedID.(primitive.ObjectID) // Type assertion
+
+		// ส่งข้อมูลโปรโมชั่นที่สร้างใหม่พร้อม _id กลับไปที่ frontend
+		c.JSON(http.StatusOK, gin.H{"message": "Promotion added successfully", "promotion": promotion})
 	}
 }
 

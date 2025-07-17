@@ -46,14 +46,16 @@ func main() {
 	// Show data
 	api.GET("/categories", handlers.GetCategoriesHandler(db))
 	api.GET("/packages", handlers.GetPackagesHandler(db))
-
 	// Query
+	// Package
+	r.GET("/api/search", handlers.SearchPackagesHandler(db))
 	api.POST("/packages", handlers.CreatePackageHandler(db))
 	api.POST("/packages/delete", handlers.DeletePackageHandler(db))
-
 	api.POST("/packages/add-pricing", handlers.AddPricingToPackageHandler(db))
 	api.POST("/packages/delete-pricing", handlers.DeletePricingFromPackageHandler(db))
+	api.DELETE("/packages/:id", handlers.DeleteOnePackage(db))
 
+	// Promotion
 	r.GET("/api/promotions", handlers.GetPromotionsHandler(db))
 	r.POST("/api/promotions", handlers.AddPromotionHandler(db))
 	r.POST("/api/calculate-price", handlers.CalculatePriceHandler(db))
