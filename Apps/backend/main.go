@@ -33,7 +33,7 @@ func main() {
 	// ✅ CORS
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:8081", "http://192.168.3.58:8081"}, // ใส่ origin ของ frontend
-		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "OPTIONS", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -57,6 +57,12 @@ func main() {
 		})
 	})
 	api.GET("/me", authHandler.GetMe)
+
+	//  เพิ่ม cart handler
+	cartHandler := handlers.NewCartHandler(db)
+	api.GET("/cart", cartHandler.GetCart)
+	api.POST("/cart", cartHandler.AddToCart)
+	api.DELETE("/cart/:id", cartHandler.DeleteFromCart)
 
 	r.Run(":" + cfg.Port)
 }
