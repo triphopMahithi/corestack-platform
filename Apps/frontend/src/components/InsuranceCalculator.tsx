@@ -13,7 +13,18 @@ import Step3 from '@/components/steps/Step3';
 import { createFormStepHandlers } from '@/utils/formStepHandlers';
 import { calculateTieredPremium, getPricingTiersFromPackage } from '@/utils/premiumCalculator';
 import { parseCoverageFromText } from '@/utils/ParserHandler';
+import { useAuth } from '../contexts/AuthContext';
 
+interface CartItem {
+  id: string;
+  userId: string;
+  username: string;
+  packageName: string;
+  startAge: number;
+  endAge: number;
+  premium: { annual: number };
+  dateAdded: string;
+}
 interface CalculatorData {
   gender: string;
   currentAge: string;
@@ -49,6 +60,8 @@ const InsuranceCalculator = () => {
 
   // ===== State Management =====
   /* รวบรวมสถานะที่เราสามารถเรียกใช้ได้  */
+  const { user } = useAuth();
+  console.log("user:", user);
   const [formData, setFormData] = useState<CalculatorData>({
     gender: '',
     currentAge: '',
@@ -60,7 +73,7 @@ const InsuranceCalculator = () => {
   // การเก็บสถานะข้อมูลที่เรียกใช้มาจาก API
   const [packagesData, setPackagesData] = useState<any[]>([]);
   const [categoriesData, setCategoriesData] = useState<Record<string, string[]>>({});
-
+  
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [stepData, setStepData] = useState<StepData>({
     selectedPackage: '',
@@ -77,6 +90,8 @@ const InsuranceCalculator = () => {
     annual: number;
   } | null>(null);
 
+  const [cart, setCart] = useState<CartItem[]>([]);
+
   // Category selection states
   const [selectedPackages, setSelectedPackages] = useState<SelectedPackage[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
@@ -89,16 +104,19 @@ const InsuranceCalculator = () => {
     const fetchData = async () => {
       try {
         // ดึงทั้ง packages และ categories พร้อมกัน
-        const [pkgRes, catRes] = await Promise.all([
+        const [pkgRes, catRes, cartRes] = await Promise.all([
           fetch('http://localhost:8080/api/packages'),
-          fetch('http://localhost:8080/api/categories')
+          fetch('http://localhost:8080/api/categories'),
+          fetch('http://localhost:8080/api/cart')
         ]);
       
         const packages = await pkgRes.json();
         const categories = await catRes.json();
-      
+        const cartItems = await cartRes.json();
+
         setPackagesData(packages); // array ของแพ็กเกจ
-      
+        setCart(Array.isArray(cartItems) ? cartItems : []);
+
         // แปลง category array ให้เป็น object: { categoryId: [packageId, ...] }
         const categoryMap: Record<string, string[]> = {};
         categories.forEach((cat: any) => {
@@ -113,6 +131,59 @@ const InsuranceCalculator = () => {
 
   fetchData();
 }, []);
+  useEffect(() => {
+  if (user?._id || user?.userId) {
+    localStorage.setItem('userId', user._id ?? user.userId);
+  }
+}, [user]);
+    // 🛒 เพิ่ม & ลบ cart
+  const handleAddToCart = async (item: Omit<CartItem, 'id' | 'userId' | 'dateAdded'>) => {
+    try {
+      const userId = user?._id || user?.userId || '';
+      const username = user?.username || 'Unknown User';
+      if (!userId) {
+        console.error("No userId, cannot add to cart");
+      return;
+        
+      }
+
+      const newItemWithUser = {
+        ...item,
+        userId,
+        username,
+        dateAdded: new Date().toISOString(),
+      };
+
+      console.log("Will send to backend:", newItemWithUser);
+
+      const res = await fetch('http://localhost:8080/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newItemWithUser),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Backend error:", errorText);
+        return;
+      }
+
+      const savedItem = await res.json();
+      setCart(prev => [...prev, savedItem]);
+      setCurrentStep(1);
+    } catch (error) {
+      console.error("เพิ่มตะกร้าล้มเหลว", error);
+    }
+  };
+
+const handleRemoveFromCart = async (id: string) => {
+    try {
+      await fetch(`http://localhost:8080/api/cart/${id}`, { method: 'DELETE' });
+      setCart(prev => prev.filter(item => item.id !== id));
+    } catch (error) {
+      console.error("ลบตะกร้าล้มเหลว", error);
+    }
+  };
 
   // ดึงข้อมูลจาก object
   /* ฟังก์ชันสำหรับการคัดกรองข้อมูล */
@@ -267,7 +338,11 @@ const calculatePremium = () => {
             endAge={coverageAge}
             gender={gender}
             saved={!!stepData.savedData}
-            onSave={handleSave}
+            onSave={() => {
+              const tiers = getPricingTiersFromPackage(pkg, gender);
+              const premium = calculateTieredPremium(currentAge, coverageAge, tiers);
+              handleAddToCart({ packageName: pkg.name, startAge: currentAge, endAge: coverageAge, premium });
+            }}
             goBack={goBackStep}
             />
           ) : (
@@ -384,9 +459,10 @@ const calculatePremium = () => {
                         {currentStep > step ? <CheckCircle className="w-5 h-5" /> : step}
                       </div>
                       {step < 4 && (
-                        <div className={`w-12 h-1 ${
-                          currentStep > step ? 'bg-brand-green' : 'bg-gray-200'
-                        }`} />
+                         <div
+                          className="w-12 h-1"
+                          style={{ backgroundColor: currentStep > step ? '#496650' : '#e5e7eb' }} // #e5e7eb = gray-200
+                      />
                       )}
                     </div>
                   ))}
@@ -436,7 +512,20 @@ const calculatePremium = () => {
             {/* HACK: ปัญหาเมื่อเราไม่ใส่ข้อมูล CoverageAge ปุ่ม "คำนวณเบี้ยประกัน" ไม่สามารถทำงานได้
               * แนวทางการแก้ไข : เรากำหนดให้ค่าของ parseInt(formData.CoverageAge) ? CoverageAge : CurrentAge
             */}
-  
+
+               {cart && cart.length > 0 && (
+        <div className="border rounded p-3 space-y-2 mt-4">
+            <h5 className="font-semibold">🛒 ตะกร้าของคุณ:</h5>
+            {cart.map(item => (
+              <div key={item.id} className="flex justify-between text-sm bg-gray-50 p-2 rounded">
+                <span>{item.packageName} (อายุ {item.startAge}–{item.endAge}) – ฿
+                {item.premium?.annual ? item.premium.annual.toLocaleString() : '-'}</span>
+                <button onClick={() => handleRemoveFromCart(item.id)} className="text-red-500 text-xs">ลบ</button>
+               </div>
+              ))}
+          <div className="font-semibold">รวม: ฿{cart.reduce((sum, i) => sum + (i.premium?.annual || 0), 0).toLocaleString()}</div>
+        </div>
+               )}
               <div className="space-y-3 pt-4 border-t">
                 <Button 
                   onClick={calculatePremium}
