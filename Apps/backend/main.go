@@ -23,7 +23,6 @@ func main() {
 	}
 	db := client.Database(cfg.MongoDBName)
 	database.UserCollection = db.Collection("users")
-
 	// Gin setup
 	r := gin.Default()
 
@@ -59,6 +58,13 @@ func main() {
 	r.POST("/api/promotions", handlers.AddPromotionHandler(db))
 	r.POST("/api/calculate-price", handlers.CalculatePriceHandler(db))
 	r.DELETE("/api/promotions/:id", handlers.DeletePromotionHandler(db))
+
+	//  เพิ่ม cart handler
+	cartHandler := handlers.NewCartHandler(db)
+	api.GET("/cart", cartHandler.GetCart)
+	api.POST("/cart", cartHandler.AddToCart)
+	api.DELETE("/cart/:id", cartHandler.DeleteFromCart)
+
 	// Authentication
 	authHandler := handlers.NewAuthHandler(cfg)
 	api.GET("/auth/login/line", authHandler.LineLoginHandler)
