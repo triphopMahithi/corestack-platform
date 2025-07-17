@@ -41,7 +41,13 @@ const Admin = () => {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
   const [packageList, setPackageList] = useState([]); // State to store all packages
-
+  
+  const [query, setQuery] = useState('');
+  const [packages, setPackages] = useState([]);
+  const [selectedPackage, setSelectedPackage] = useState('');
+  const [noResults, setNoResults] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showMoreInfo, setShowMoreInfo] = useState(false); // สำหรับการแสดงข้อมูลเพิ่มเติม
   // promotion state
   const [promotionType, setPromotionType] = useState('general');  // default type
   const [promotionName, setPromotionName] = useState('');
@@ -51,7 +57,92 @@ const Admin = () => {
   const [validTo, setValidTo] = useState('');
   const [packageId, setPackageId] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  /** 
+   *  
+   * Search 
+   * 
+   */
+
+  // ฟังก์ชันค้นหาแพ็กเกจ
+  const handleSearch = async (e) => {
+    const searchQuery = e.target.value;
+    setQuery(searchQuery);
+
+    if (searchQuery.length >= 1) {
+      try {
+        // ส่งคำค้นหาไปที่ backend
+        const response = await axios.get(
+          `http://localhost:8080/api/search?query=${searchQuery}`
+        );
+        if (response.data.length === 0) {
+          setNoResults(true);
+        } else {
+          setPackages(response.data);
+          setNoResults(false);
+        }
+      } catch (error) {
+        console.error("Error fetching packages", error);
+      }
+    } else {
+      setPackages([]);
+    }
+  };
+  const handlePackageSelect = (pkg) => {
+    setSelectedPackage(pkg);
+    setIsDropdownOpen(false); // ปิด dropdown เมื่อเลือกแล้ว
+  };
+
+  // คำนวณอายุที่น้อยที่สุดและมากที่สุดจาก pricing
+  const getMinAge = (pricing) => {
+    if (!pricing || pricing.length === 0) return null;
+    return Math.min(...pricing.map(p => p.ageFrom));
+  };
+
+  const getMaxAge = (pricing) => {
+    if (!pricing || pricing.length === 0) return null;
+    return Math.max(...pricing.map(p => p.ageTo));
+  };
+
+  // คำนวณราคาเพศชาย (Male) และเพศหญิง (Female) ตามช่วงอายุ
+  const getPriceByGender = (pricing, gender) => {
+    if (!pricing || pricing.length === 0) return null;
+    const price = pricing.find(p => p.gender === gender);
+    return price ? price[gender] : 0;
+  };
+
+/**
+ * 
+ *    Page Function
+ */
+
+  // ฟังก์ชันเกี่ยวกับ ขึ้นหน้าใหม่
+  const ItemsPerPage = 5; // จำนวนรายการที่จะแสดงในแต่ละหน้า
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // ฟังก์ชันคำนวณข้อมูลที่จะแสดงในแต่ละหน้า
+  const startIndex = (currentPage - 1) * ItemsPerPage;
+  const currentPackages = packageList.slice(startIndex, startIndex + ItemsPerPage);
+
+  // ฟังก์ชันไปหน้าถัดไป
+  const nextPage = () => {
+    if (currentPage < Math.ceil(packageList.length / ItemsPerPage)) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  // ฟังก์ชันไปหน้าก่อนหน้า
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };  
   
+/**
+ * 
+ *  Package
+ * 
+ */
+
 
   // Fetch package list from database when the component is mounted
   useEffect(() => {
@@ -59,6 +150,7 @@ const Admin = () => {
       try {
         const response = await axios.get('http://localhost:8080/api/packages');
         setPackageList(response.data); // Store the received data in state
+        console.log('Package - ', response.data)
         // updated ui
       } catch (error) {
         toast({
@@ -120,7 +212,7 @@ const addPricingInput = () => {
   };
 
 const handleSavePackage = () => {
-  if (!newPackage.id || !newPackage.name || !newPackage.categoryId || pricingInputs.length === 0) {
+  if (!newPackage.name || !newPackage.categoryId || pricingInputs.length === 0) {
     toast({
       title: 'ข้อมูลไม่ครบถ้วน',
       description: 'กรุณากรอกข้อมูลให้ครบถ้วน',
@@ -163,8 +255,8 @@ const handleSavePackage = () => {
     pricing: newPricingData 
   };
     // ส่งข้อมูลใหม่ไปที่ backend (สมมุติว่าเป็น POST request)
-axios.post('http://localhost:8080/api/packages', packageToSave)
-  .then((response) => {
+    axios.post('http://localhost:8080/api/packages', packageToSave)
+    .then((response) => {
     // เมื่อการส่งข้อมูลสำเร็จ
     toast({
       title: 'บันทึกสำเร็จ',
@@ -197,72 +289,6 @@ axios.post('http://localhost:8080/api/packages', packageToSave)
     });
   });
 }
-const handleAddPromotion = async () => {
-  // ตรวจสอบข้อมูลที่กรอก
-  if (!promotionName || !promotionDescription) {
-    toast({
-      title: 'ข้อมูลไม่ครบถ้วน',
-      description: 'กรุณากรอกชื่อโปรโมชั่นและรายละเอียด',
-      variant: 'destructive',
-    });
-    return;
-  }
-
-  // ตรวจสอบสำหรับ "โปรโมชั่นเฉพาะแพ็คเกจ"
-  if (promotionType === 'package' && !packageId) {
-    toast({
-      title: 'ข้อมูลไม่ครบถ้วน',
-      description: 'กรุณากรอกชื่อแพ็คเกจที่โปรโมชั่นใช้ได้',
-      variant: 'destructive',
-    });
-    return;
-  }
-
-  // ตรวจสอบสำหรับ "โปรโมชั่นเฉพาะ categoryId"
-  if (promotionType === 'category' && !categoryId) {
-    toast({
-      title: 'ข้อมูลไม่ครบถ้วน',
-      description: 'กรุณากรอก categoryId ที่โปรโมชั่นใช้ได้',
-      variant: 'destructive',
-    });
-    return;
-  }
-
-  // สร้างข้อมูลโปรโมชั่น
-  const promotionData = {
-    name: promotionName,
-    description: promotionDescription,
-    type: promotionType,
-    discountPercentage: parseFloat(discountPercentage),
-    validFrom,
-    validTo,
-    packageId: promotionType === 'package' ? packageId : null,
-    categoryId: promotionType === 'category' ? categoryId : null,
-  };
-
-  try {
-    // ส่งข้อมูลโปรโมชั่นไปยัง backend
-    await axios.post('http://localhost:8080/api/promotions', promotionData);
-    
-    toast({
-      title: 'โปรโมชั่นถูกเพิ่มแล้ว',
-      description: `เพิ่มโปรโมชั่น ${promotionName} สำเร็จ`,
-    });
-
-    // รีเซ็ตฟอร์มหลังจากเพิ่ม
-    setPromotionName('');
-    setPromotionDescription('');
-    setPackageId('');
-    setCategoryId('');
-  } catch (error) {
-    toast({
-      title: 'เกิดข้อผิดพลาด',
-      description: error.response?.data?.message || 'ไม่สามารถเพิ่มโปรโมชั่นได้',
-      variant: 'destructive',
-    });
-  }
-}
-
 
  // ฟังก์ชันจัดการการเปลี่ยนแปลงราคา
 const handlePricingChange = (index: number, field: string, value: string) => {
@@ -276,7 +302,6 @@ const handlePricingChange = (index: number, field: string, value: string) => {
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
-  const [selectedPackage, setSelectedPackage] = useState('');
   const [monthlyPrice, setMonthlyPrice] = useState('');
   const [annualPrice, setAnnualPrice] = useState('');
   
@@ -360,24 +385,35 @@ const handlePricingChange = (index: number, field: string, value: string) => {
     setAnnualPrice('');
   };
 
-  const handlePackageSelect = (packageName: string) => {
-    setSelectedPackage(packageName);
-    const existing = packagePrices.find(p => p.packageName === packageName);
-    if (existing) {
-      setMonthlyPrice(existing.baseMonthly.toString());
-      setAnnualPrice(existing.baseAnnual.toString());
-    } else {
-      setMonthlyPrice('');
-      setAnnualPrice('');
-    }
-  };
+  //const handlePackageSelect = (packageName: string) => {
+  //  setSelectedPackage(packageName);
+  //  const existing = packagePrices.find(p => p.packageName === packageName);
+  //  if (existing) {
+  //    setMonthlyPrice(existing.baseMonthly.toString());
+  //    setAnnualPrice(existing.baseAnnual.toString());
+  //  } else {
+  //    setMonthlyPrice('');
+  //    setAnnualPrice('');
+  //  }
+  //};
 
-  const handleDeletePrice = (packageName: string) => {
-    setPackagePrices(packagePrices.filter(p => p.packageName !== packageName));
+  const handleDeletePackage = async (packageName: string) => {
+    console.log('PackageID - ',packageName)
+    //setPackagePrices(packagePrices.filter(p => p.packageName !== packageName));
+    try {
+      const response = await axios.delete(`http://localhost:8080/api/packages/${packageName}`);
+    } catch (error) {
+      toast({
+      title: "เกิดข้อผิดพลาด",
+      description: "ไม่สามารถลบแพ็คเกจได้",
+      variant: "destructive",
+    });
+    }
     toast({
       title: "ลบสำเร็จ",
       description: `ลบราคาสำหรับ ${packageName} แล้ว`,
     });
+
   };
 
   const handleEditPackage = (packageName) => {
@@ -390,28 +426,13 @@ const handlePricingChange = (index: number, field: string, value: string) => {
     });
 };
 
-  // ฟังก์ชันเกี่ยวกับ ขึ้นหน้าใหม่
-  const ItemsPerPage = 5; // จำนวนรายการที่จะแสดงในแต่ละหน้า
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // ฟังก์ชันคำนวณข้อมูลที่จะแสดงในแต่ละหน้า
-  const startIndex = (currentPage - 1) * ItemsPerPage;
-  const currentPackages = packageList.slice(startIndex, startIndex + ItemsPerPage);
-
-  // ฟังก์ชันไปหน้าถัดไป
-  const nextPage = () => {
-    if (currentPage < Math.ceil(packageList.length / ItemsPerPage)) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  // ฟังก์ชันไปหน้าก่อนหน้า
-  const prevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };  
   
+  /**
+   *  Promotion
+   * 
+   */
+  
+
   const [promotionListState, setPromotionListState] = useState([]); // ข้อมูลโปรโมชั่น
   const [loading, setLoading] = useState(true); // สถานะการโหลดข้อมูล
   const [error, setError] = useState(null); // ข้อผิดพลาด
@@ -419,21 +440,33 @@ const handlePricingChange = (index: number, field: string, value: string) => {
     (currentPage - 1) * ItemsPerPage,
     currentPage * ItemsPerPage
   );
+  
+
+  // ดึงข้อมูลโปรโมชั่นจาก API เมื่อ component ถูก mount
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      try {
+        const response = await axios.get('http://localhost:8080/api/promotions');
+        setPromotionListState(response.data); // เก็บข้อมูลที่ได้ใน state
+        console.log("log - interface promotions :",response.data);
+      } catch (error) {
+        setError("ไม่สามารถดึงข้อมูลโปรโมชั่นได้");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPromotions();
+  }, []); // Empty dependency array หมายความว่า useEffect จะทำงานเพียงครั้งเดียวเมื่อ component ถูก mount
+
+
   const handleDeletePromotion = async (promotionId: string) => {
-  if (!promotionId) {
-    console.error("Promotion ID is undefined or invalid");
-    return;
-  }
+    console.log("promotionId -",promotionId)
 
   try {
     // ส่งคำขอ DELETE ไปยัง backend
     const response = await axios.delete(`http://localhost:8080/api/promotions/${promotionId}`);
-    console.log("Response from delete:", response);
-
-    // อัปเดตสถานะหลังจากลบข้อมูล
-    setPromotionListState((prev) =>
-      prev.filter((promotion) => promotion._id !== promotionId)
-    );
+    console.log("Response from delete:", response);    
     toast({
       title: "ลบโปรโมชั่นสำเร็จ",
       description: `โปรโมชั่นที่มี ID: ${promotionId} ถูกลบแล้ว`,
@@ -453,24 +486,77 @@ const handleEditPromotion = (promotionId: string) => {
   // เพิ่มการจัดการการแก้ไขข้อมูลที่นี่ เช่น การแสดงฟอร์มแก้ไข
 };
 
+const handleAddPromotion = async () => {
+  // ตรวจสอบข้อมูลที่กรอก
+  if (!promotionName || !promotionDescription) {
+    toast({
+      title: 'ข้อมูลไม่ครบถ้วน',
+      description: 'กรุณากรอกชื่อโปรโมชั่นและรายละเอียด',
+      variant: 'destructive',
+    });
+    return;
+  }
 
+  // ตรวจสอบสำหรับ "โปรโมชั่นเฉพาะแพ็คเกจ"
+  if (promotionType === 'package' && !packageId) {
+    toast({
+      title: 'ข้อมูลไม่ครบถ้วน',
+      description: 'กรุณากรอกชื่อแพ็คเกจที่โปรโมชั่นใช้ได้',
+      variant: 'destructive',
+    });
+    return;
+  }
 
-  // ดึงข้อมูลโปรโมชั่นจาก API เมื่อ component ถูก mount
-  useEffect(() => {
-    const fetchPromotions = async () => {
-      try {
-        const response = await axios.get('http://localhost:8080/api/promotions');
-        setPromotionListState(response.data); // เก็บข้อมูลที่ได้ใน state
-        console.log("log:",response.data);
-      } catch (error) {
-        setError("ไม่สามารถดึงข้อมูลโปรโมชั่นได้");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // ตรวจสอบสำหรับ "โปรโมชั่นเฉพาะ categoryId"
+  if (promotionType === 'category' && !categoryId) {
+    toast({
+      title: 'ข้อมูลไม่ครบถ้วน',
+      description: 'กรุณากรอก categoryId ที่โปรโมชั่นใช้ได้',
+      variant: 'destructive',
+    });
+    return;
+  }
 
-    fetchPromotions();
-  }, []); // Empty dependency array หมายความว่า useEffect จะทำงานเพียงครั้งเดียวเมื่อ component ถูก mount
+  // สร้างข้อมูลโปรโมชั่น
+  const promotionData = {
+    name: promotionName,
+    description: promotionDescription,
+    type: promotionType,
+    discountPercentage: parseFloat(discountPercentage),
+    validFrom,
+    validTo,
+    packageId: promotionType === 'package' ? packageId : null,
+    categoryId: promotionType === 'category' ? categoryId : null,
+  };
+
+  try {
+    // ส่งข้อมูลโปรโมชั่นไปยัง backend
+    //await axios.post('http://localhost:8080/api/promotions', promotionData);
+    const response = await axios.post('http://localhost:8080/api/promotions', promotionData);
+    // รับข้อมูลโปรโมชั่นที่ถูกสร้างพร้อม _id
+    const createdPromotion = response.data.promotion;
+
+    // อัปเดตรายการโปรโมชั่นใน state
+    setPromotionListState((prev) => [...prev, createdPromotion]);
+    
+    toast({
+      title: 'โปรโมชั่นถูกเพิ่มแล้ว',
+      description: `เพิ่มโปรโมชั่น ${promotionName} สำเร็จ`,
+    });
+
+    // รีเซ็ตฟอร์มหลังจากเพิ่ม
+    setPromotionName('');
+    setPromotionDescription('');
+    setPackageId('');
+    setCategoryId('');
+  } catch (error) {
+    toast({
+      title: 'เกิดข้อผิดพลาด',
+      description: error.response?.data?.message || 'ไม่สามารถเพิ่มโปรโมชั่นได้',
+      variant: 'destructive',
+    });
+  }
+}
 
   if (loading) {
     return <p>กำลังโหลดข้อมูล...</p>;
@@ -510,48 +596,100 @@ const handleEditPromotion = (promotionId: string) => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label>เลือกแพ็คเกจ</Label>
-                        <Select value={selectedPackage} onValueChange={handlePackageSelect}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="เลือกแพ็คเกจ" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {allPackages.map((pkg) => (
-                              <SelectItem key={pkg} value={pkg}>{pkg}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+        <div className="space-y-4">
+ <div>
+      {/* ช่องค้นหาสำหรับการพิมพ์ */}
+      <input
+        type="text"
+        value={query}
+        onChange={handleSearch}
+        placeholder="ค้นหาแพ็กเกจ..."
+        onFocus={() => setIsDropdownOpen(true)} // เปิด dropdown เมื่อคลิกช่องค้นหา
+      />
 
-                      <div className="space-y-2">
-                        <Label htmlFor="monthlyPrice">ราคาต่อเดือน (฿)</Label>
-                        <Input
-                          id="monthlyPrice"
-                          type="number"
-                          value={monthlyPrice}
-                          onChange={(e) => setMonthlyPrice(e.target.value)}
-                          placeholder="0"
-                        />
-                      </div>
+      {/* แสดงผลลัพธ์การค้นหาผ่าน div dropdown */}
+      <div className="relative">
+        {isDropdownOpen && (
+          <div className="absolute z-10 w-full bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
+            {noResults ? (
+              <div className="p-2 text-center text-gray-500">ไม่พบข้อมูล</div>
+            ) : (
+              packages.map((pkg) => (
+                <div
+                  key={pkg.id}
+                  className="p-2 cursor-pointer hover:bg-gray-200"
+                  onClick={() => handlePackageSelect(pkg)} // เมื่อเลือกแพ็กเกจ
+                >
+                  {pkg.name}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="annualPrice">ราคาต่อปี (฿)</Label>
-                        <Input
-                          id="annualPrice"
-                          type="number"
-                          value={annualPrice}
-                          onChange={(e) => setAnnualPrice(e.target.value)}
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
+      {/* แสดงข้อมูลของแพ็กเกจที่เลือก */}
+      {selectedPackage && (
+        <div className="mt-4">
+          <h3 className="text-xl font-semibold">ข้อมูลแพ็กเกจ</h3>
+          <p><strong>ชื่อแพ็กเกจ:</strong> {selectedPackage.name}</p>
 
-                    <Button onClick={handleSavePrice} className="brand-green">
-                      <Save className="w-4 h-4 mr-2" />
-                      บันทึกราคา
-                    </Button>
+          {/* แสดง AgeFrom และ AgeTo ที่น้อยที่สุดและมากที่สุดจาก pricing */}
+          <div>
+            {selectedPackage.pricing && selectedPackage.pricing.length > 0 ? (
+              <p>
+                อายุที่น้อยที่สุด: {getMinAge(selectedPackage.pricing)} <br />
+                อายุที่มากที่สุด: {getMaxAge(selectedPackage.pricing)}
+              </p>
+            ) : (
+              <p>ไม่มีข้อมูลช่วงอายุ</p>
+            )}
+          </div>
+          {/* ปุ่มแสดงข้อมูลเพิ่มเติม */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowMoreInfo(!showMoreInfo)} // Toggle การแสดงข้อมูลเพิ่มเติม
+            className="mt-4"
+          >
+            {showMoreInfo ? "ซ่อนข้อมูลเพิ่มเติม" : "แสดงข้อมูลเพิ่มเติม"}
+          </Button>
+
+          {/* แสดงข้อมูลเพิ่มเติมเมื่อคลิก */}
+          {showMoreInfo && (
+            <div className="mt-4">
+              <p><strong>หมวดหมู่:</strong> {selectedPackage.categoryId}</p>
+              <p><strong>ข้อจำกัดเพศ:</strong> {selectedPackage.genderRestriction}</p>
+              <p><strong>อายุขั้นต่ำ:</strong> {selectedPackage.minAge}</p>
+              <p><strong>อายุสูงสุด:</strong> {selectedPackage.maxAge}</p>
+            </div>
+          )}
+
+          <div className="flex space-x-2 mt-4">
+            {/* ปุ่มแก้ไข */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleEditPackage(selectedPackage.id)}
+              className="text-blue-600 hover:text-blue-700"
+            >
+              แก้ไข
+            </Button>
+
+            {/* ปุ่มลบ */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDeletePackage(selectedPackage.id)}
+              className="text-red-600 hover:text-red-700"
+            >
+              ลบ
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+        </div>
                   </CardContent>
                 </Card>
 
@@ -575,7 +713,7 @@ const handleEditPromotion = (promotionId: string) => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleDeletePrice(pkg.id)} 
+                onClick={() => handleDeletePackage(pkg.id)} 
                 className="text-red-600 hover:text-red-700"
               >
                 <Trash2 className="w-4 h-4" />
@@ -616,6 +754,7 @@ const handleEditPromotion = (promotionId: string) => {
         <CardContent>
           <div className="space-y-4">
             {/* ฟอร์มสำหรับกรอกข้อมูลแพ็คเกจ */}
+            {/** 
             <div className="space-y-2">
               <Label htmlFor="packageId">ID แพ็คเกจ</Label>
               <Input
@@ -625,6 +764,7 @@ const handleEditPromotion = (promotionId: string) => {
                 placeholder="กรอก ID แพ็คเกจ"
               />
             </div>
+            */}
             <div className="space-y-2">
               <Label htmlFor="packageName">ชื่อแพ็คเกจ</Label>
               <Input
@@ -835,7 +975,7 @@ const handleEditPromotion = (promotionId: string) => {
           >
             <div>
               <h4 className="font-medium">{promotion.Name}</h4>
-              <p className="text-sm text-gray-600">คำอธิบาย : {promotion.Description}</p>
+                <p className="text-sm text-gray-600">คำอธิบาย : {promotion.Description}</p>
               <p className="text-sm text-gray-600">
                 ส่วนลด: {promotion.DiscountPercentage}% {/* แสดงส่วนลด */}
               </p>
@@ -852,7 +992,7 @@ const handleEditPromotion = (promotionId: string) => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleDeletePromotion(promotion._id)}
+                onClick={() => handleDeletePromotion(promotion.ID)}
                 className="text-red-600 hover:text-red-700"
               >
                 
@@ -862,7 +1002,7 @@ const handleEditPromotion = (promotionId: string) => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleEditPromotion(promotion._id)}
+                onClick={() => handleEditPromotion(promotion.ID)}
                 className="text-blue-600 hover:text-blue-700"
               >
                 <Edit className="w-4 h-4" />

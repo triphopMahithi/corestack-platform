@@ -515,7 +515,7 @@ const calculatePremium = () => {
 
                {cart && cart.length > 0 && (
         <div className="border rounded p-3 space-y-2 mt-4">
-            <h5 className="font-semibold">🛒 ตะกร้าของคุณ:</h5>
+            <h5 className="font-semibold">ตะกร้าของคุณ:</h5>
             {cart.map(item => (
               <div key={item.id} className="flex justify-between text-sm bg-gray-50 p-2 rounded">
                 <span>{item.packageName} (อายุ {item.startAge}–{item.endAge}) – ฿
