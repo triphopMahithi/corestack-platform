@@ -31,15 +31,38 @@ interface StepData {
   savedData: any;
 }
 
+interface PackageObject {
+  name: string;
+  [key: string]: any;
+}
+
+interface PremiumInfo {
+  annual: number;
+}
+
+interface CartEntry {
+  packageName: string;
+  startAge: number;
+  endAge: number;
+  premium: PremiumInfo;
+  dateAdded: string;
+}
+
 interface CartItem {
   id: string;
   userId: string;
   username: string;
-  packageName: string;
+  packageName: string | { name: string } | Array<{ name: string }>;
   startAge: number;
   endAge: number;
   premium: { annual: number };
   dateAdded: string;
+}
+
+interface User {
+  _id?: string;
+  userId?: string;
+  username?: string;
 }
 
 interface SelectedPackage {
@@ -97,24 +120,48 @@ const InsuranceCalculator = () => {
   const [showAllPlans, setShowAllPlans] = useState(false);
 
   const { toast } = useToast();
+
+  // ✅ ย้าย fetchCart ออกมาเป็นฟังก์ชันแยกเพื่อให้สามารถเรียกใช้ได้จากที่อื่น
+const fetchCart = async () => {
+  try {
+    const userId = user?._id || user?.userId || "";
+    if (!userId) return;
+
+    const res = await fetch(`http://localhost:8080/api/cart?userId=${userId}`);
+    if (!res.ok) {
+      console.error("Fetch cart failed");
+      return;
+    }
+
+    const data = await res.json();
+    console.log("Fetched cart:", data);
+
+    if (Array.isArray(data)) {
+      setCart(data);
+    } else {
+      setCart([]);
+    }
+  } catch (error) {
+    console.error("Fetch cart error:", error);
+  }
+};
+
+
   // Loading API 
   /* เชื่อมโยงจาก Frontend-to-Backend โดยใช้ res ไปยัง PORT:8080 (Go lang) backend */
   useEffect(() => {
     const fetchData = async () => {
       try {
         // ดึงทั้ง packages และ categories พร้อมกัน
-        const [pkgRes, catRes,cartRes] = await Promise.all([
+        const [pkgRes, catRes] = await Promise.all([
           fetch('http://localhost:8080/api/packages'),
           fetch('http://localhost:8080/api/categories'),
-          fetch('http://localhost:8080/api/cart')
         ]);
       
         const packages = await pkgRes.json();
         const categories = await catRes.json();
-        const cartItems = await cartRes.json();
       
         setPackagesData(packages); // array ของแพ็กเกจ
-        setCart(Array.isArray(cartItems) ? cartItems : []);
       
         // แปลง category array ให้เป็น object: { categoryId: [packageId, ...] }
         const categoryMap: Record<string, string[]> = {};
@@ -128,22 +175,23 @@ const InsuranceCalculator = () => {
       }
     };
 
-  fetchData();
-}, []);
+    fetchData();
+  }, []);
+
   useEffect(() => {
-  if (user?._id || user?.userId) {
-    localStorage.setItem('userId', user._id ?? user.userId);
-  }
-}, [user]);
-    // 🛒 เพิ่ม & ลบ cart
-  const handleAddToCart = async (item: Omit<CartItem, 'id' | 'userId' | 'dateAdded'>) => {
+      if (user) {
+    fetchCart();
+      }
+  }, [user]);
+
+  // 🛒 เพิ่ม & ลบ cart
+  const handleAddToCart = async (item: Omit<CartEntry, "dateAdded">) => {
     try {
-      const userId = user?._id || user?.userId || '';
-      const username = user?.username || 'Unknown User';
+      const userId = user?._id || user?.userId || "";
+      const username = user?.username || "Unknown User";
       if (!userId) {
         console.error("No userId, cannot add to cart");
-      return;
-        
+        return;
       }
 
       const newItemWithUser = {
@@ -153,11 +201,9 @@ const InsuranceCalculator = () => {
         dateAdded: new Date().toISOString(),
       };
 
-      console.log("Will send to backend:", newItemWithUser);
-
-      const res = await fetch('http://localhost:8080/api/cart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("http://localhost:8080/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newItemWithUser),
       });
 
@@ -167,190 +213,234 @@ const InsuranceCalculator = () => {
         return;
       }
 
-      const savedItem = await res.json();
-      setCart(prev => [...prev, savedItem]);
+      // ✅ ดึงข้อมูล cart ใหม่จาก backend เพื่ออัพเดต UI ทันที
+      await fetchCart();
+
+      // ✅ แสดง toast แจ้งเตือนเมื่อเพิ่มสำเร็จ
+      toast({
+        title: "เพิ่มลงตะกร้าสำเร็จ",
+        description: `เพิ่ม ${item.packageName} ลงตะกร้าแล้ว`,
+      });
+
       setCurrentStep(1);
     } catch (error) {
       console.error("เพิ่มตะกร้าล้มเหลว", error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถเพิ่มรายการลงตะกร้าได้",
+        variant: "destructive",
+      });
     }
   };
 
-const handleRemoveFromCart = async (id: string) => {
-    try {
-      await fetch(`http://localhost:8080/api/cart/${id}`, { method: 'DELETE' });
-      setCart(prev => prev.filter(item => item.id !== id));
-    } catch (error) {
-      console.error("ลบตะกร้าล้มเหลว", error);
+  // ✅ แก้ไข handleRemoveFromCart ให้ใช้ ID แทน packageName
+const handleRemoveFromCart = async (itemId: string) => {
+  try {
+    const userId = user?._id || user?.userId || "";
+    if (!userId) return;
+
+    const res = await fetch(
+      `http://localhost:8080/api/cart/${itemId}?userId=${userId}`,
+      { method: "DELETE" }
+    );
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("Backend error:", errorText);
+      return;
     }
-  };
+
+    await fetchCart();
+
+    toast({
+      title: "ลบออกจากตะกร้าสำเร็จ",
+      description: "ลบรายการออกจากตะกร้าแล้ว",
+    });
+
+  } catch (error) {
+    console.error("ลบตะกร้าล้มเหลว", error);
+    toast({
+      title: "เกิดข้อผิดพลาด",
+      description: "ไม่สามารถลบรายการจากตะกร้าได้",
+      variant: "destructive",
+    });
+  }
+};
+
   // ดึงข้อมูลจาก object
   /* ฟังก์ชันสำหรับการคัดกรองข้อมูล */
   const getEligiblePackages = () => {
-  if (!formData.currentAge || !formData.gender) return [];
+    if (!formData.currentAge || !formData.gender) return [];
 
-  const age = parseInt(formData.currentAge);
-  const gender = formData.gender;
+    const age = parseInt(formData.currentAge);
+    const gender = formData.gender;
 
-  return packagesData
-    .filter(pkg => {
-      const withinAge = age >= pkg.minAge && age <= pkg.maxAge;
-      const genderOK = !pkg.genderRestriction || pkg.genderRestriction === gender;
-      return withinAge && genderOK;
-    })
-    .map(pkg => pkg.name);
-};
+    return packagesData
+      .filter(pkg => {
+        const withinAge = age >= pkg.minAge && age <= pkg.maxAge;
+        const genderOK = !pkg.genderRestriction || pkg.genderRestriction === gender;
+        return withinAge && genderOK;
+      })
+      .map(pkg => pkg.name);
+  };
 
-const getPlanOptionsFromPricing = (packageName: string): { label: string }[] => {
-  const pkg = packagesData.find(p => p.name === packageName);
-  if (!pkg || !Array.isArray(pkg.pricing)) return [];
+  const getPlanOptionsFromPricing = (packageName: string): { label: string }[] => {
+    const pkg = packagesData.find(p => p.name === packageName);
+    if (!pkg || !Array.isArray(pkg.pricing)) return [];
 
-  const currentAge = parseInt(formData.currentAge);
-  if (isNaN(currentAge)) return [];
+    const currentAge = parseInt(formData.currentAge);
+    if (isNaN(currentAge)) return [];
 
-  const gender = formData.gender === 'male' ? 'male' : 'female';
+    const gender = formData.gender === 'male' ? 'male' : 'female';
 
-  // ✅ ค้นหาเฉพาะช่วงอายุที่ตรงกับ currentAge
-  const matching = pkg.pricing.filter((p: any) => currentAge >= p.ageFrom && currentAge <= p.ageTo);
-  return matching.map((p: any) => {
-    const ageLabel = `อายุ ${p.ageFrom} ถึง ${p.ageTo}`;
-    const price = p[gender];
+    // ✅ ค้นหาเฉพาะช่วงอายุที่ตรงกับ currentAge
+    const matching = pkg.pricing.filter((p: any) => currentAge >= p.ageFrom && currentAge <= p.ageTo);
+    return matching.map((p: any) => {
+      const ageLabel = `อายุ ${p.ageFrom} ถึง ${p.ageTo}`;
+      const price = p[gender];
 
-    return {
-      label: `${ageLabel} : ฿ ${price?.toLocaleString() ?? '-'}`,
-    };
-  });
-};
-
-{/* Form Handler */}
-const {
-  handlePackageSelection,
-  selectPackage,
-  selectPlan,
-  handleSave,
-  resetForm,
-  goBackStep
-} = createFormStepHandlers({
-  formData,
-  setFormData,
-  stepData,
-  setStepData,
-  currentStep,
-  setCurrentStep,
-  setShowResult,
-  setCalculatedPremium,
-  setSelectedPackages,
-  setExpandedCategories,
-  setShowAllPlans,
-  toast
-});
-
-const calculatePremium = () => {
-  const { gender, currentAge, coverageAge } = formData;
-
-  if (!gender || !currentAge || !stepData.selectedPackage) {
-    toast({
-      title: "ข้อมูลไม่ครบ",
-      description: "กรุณากรอกเพศ อายุ และเลือกแพ็กเกจ",
-      variant: "destructive",
+      return {
+        label: `${ageLabel} : ฿ ${price?.toLocaleString() ?? '-'}`,
+      };
     });
-    return;
-  }
+  };
 
-  const startAge = parseInt(currentAge, 10);
-  const endAge = coverageAge ? parseInt(coverageAge, 10) : startAge;
-
-  const pkg = packagesData.find(p => p.name === stepData.selectedPackage);
-  if (!pkg) {
-    toast({
-      title: "ไม่พบแพ็กเกจ",
-      description: "ไม่สามารถค้นหาแพ็กเกจที่เลือกได้",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  const pricingTiers = getPricingTiersFromPackage(pkg, gender as 'male' | 'female');
-  const premium = calculateTieredPremium(startAge, endAge, pricingTiers);
-
-  setCalculatedPremium(premium);
-  setShowResult(true);
-
-  toast({
-    title: "คำนวณสำเร็จ",
-    description: "พบเบี้ยประกันที่เหมาะสมแล้ว",
+  {/* Form Handler */}
+  const {
+    handlePackageSelection,
+    selectPackage,
+    selectPlan,
+    handleSave,
+    resetForm,
+    goBackStep
+  } = createFormStepHandlers({
+    formData,
+    setFormData,
+    stepData,
+    setStepData,
+    currentStep,
+    setCurrentStep,
+    setShowResult,
+    setCalculatedPremium,
+    setSelectedPackages,
+    setExpandedCategories,
+    setShowAllPlans,
+    toast
   });
-};
 
+  const calculatePremium = () => {
+    const { gender, currentAge, coverageAge } = formData;
 
+    if (!gender || !currentAge || !stepData.selectedPackage) {
+      toast({
+        title: "ข้อมูลไม่ครบ",
+        description: "กรุณากรอกเพศ อายุ และเลือกแพ็กเกจ",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const startAge = parseInt(currentAge, 10);
+    const endAge = coverageAge ? parseInt(coverageAge, 10) : startAge;
+
+    const pkg = packagesData.find(p => p.name === stepData.selectedPackage);
+    if (!pkg) {
+      toast({
+        title: "ไม่พบแพ็กเกจ",
+        description: "ไม่สามารถค้นหาแพ็กเกจที่เลือกได้",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const pricingTiers = getPricingTiersFromPackage(pkg, gender as 'male' | 'female');
+    const premium = calculateTieredPremium(startAge, endAge, pricingTiers);
+
+    setCalculatedPremium(premium);
+    setShowResult(true);
+
+    toast({
+      title: "คำนวณสำเร็จ",
+      description: "พบเบี้ยประกันที่เหมาะสมแล้ว",
+    });
+  };
 
   // Render Step-by-steps เราใช้ case มาช่วยในการทำ
   /* Multi-step flow  */
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-      /* HACK: ปัญหาการแสดงข้อมูล <Packages> <plan> 
-      *  ซึ่งความเป็นจริงไม่ควรจะแสดง <plan> 
-      *
-      * NOTE: หากผู้ใช้ไม่ได้ใส่ข้อมูลดังต่อไปนี้ข้อมูลควรที่จะยังสามารถแสดงได้
-      * สามารถทำงานได้ : เพศ (gender) กับ ความคุ้มครองจนถึงอายุ (CoverageAge)
-      * ผลลัพธ์        : package -> plan (price.male/price.female)
-      */
-      const eligiblePackages = getEligiblePackages();
-      return (
-        <Step1
-          eligiblePackages={eligiblePackages}
-          selectPackage={selectPackage}
-          goBack={goBackStep}
-        />);
+        /* HACK: ปัญหาการแสดงข้อมูล <Packages> <plan> 
+        *  ซึ่งความเป็นจริงไม่ควรจะแสดง <plan> 
+        *
+        * NOTE: หากผู้ใช้ไม่ได้ใส่ข้อมูลดังต่อไปนี้ข้อมูลควรที่จะยังสามารถแสดงได้
+        * สามารถทำงานได้ : เพศ (gender) กับ ความคุ้มครองจนถึงอายุ (CoverageAge)
+        * ผลลัพธ์        : package -> plan (price.male/price.female)
+        */
+        const eligiblePackages = getEligiblePackages();
+        return (
+          <Step1
+            eligiblePackages={eligiblePackages}
+            selectPackage={selectPackage}
+            goBack={goBackStep}
+          />
+        );
 
       case 2:
-      const availablePlans = getPlanOptionsFromPricing(stepData.selectedPackage);
-      return (
-        <Step2
-          availablePlans={availablePlans}
-          selectedPackage={stepData.selectedPackage}
-          selectPlan={selectPlan}
-          goBack={goBackStep}
-        />);
-      case 3:
-        
-          /**
-           * ตรวจสอบข้อมูลที่จำเป็นต้องใช้ในขั้นตอนที่ 3 (Step3) ดึงข้อมูลที่ผู้ใช้เลือกมาซึ่งเป็น object
-           * ทำการแปลงข้อมูล เพศกับช่วงอายุให้เรียบร้อย
-           */
-          
-          const selectedPackageName = stepData.selectedPackage;
-          const pkg = packagesData.find(p => p.name === selectedPackageName);
+        const availablePlans = getPlanOptionsFromPricing(stepData.selectedPackage);
+        return (
+          <Step2
+            availablePlans={availablePlans}
+            selectedPackage={stepData.selectedPackage}
+            selectPlan={selectPlan}
+            goBack={goBackStep}
+          />
+        );
 
-          const gender = formData.gender as 'male' | 'female';
-          const currentAge = parseInt(formData.currentAge);
-          const coverageAge = formData.coverageAge ? parseInt(formData.coverageAge) : currentAge;
+      case 3:
+        /**
+         * ตรวจสอบข้อมูลที่จำเป็นต้องใช้ในขั้นตอนที่ 3 (Step3) ดึงข้อมูลที่ผู้ใช้เลือกมาซึ่งเป็น object
+         * ทำการแปลงข้อมูล เพศกับช่วงอายุให้เรียบร้อย
+         */
+        const selectedPackageName = stepData.selectedPackage;
+        const pkg = packagesData.find(p => p.name === selectedPackageName);
+
+        const gender = formData.gender as 'male' | 'female';
+        const currentAge = parseInt(formData.currentAge);
+        const coverageAge = formData.coverageAge ? parseInt(formData.coverageAge) : currentAge;
 
         return (
           // TODO: สรุปข้อมูลที่ลูกค้าได้กรอกไปทั้งหมด
           pkg && gender && currentAge && coverageAge ? (
             <Step3
-            selectedPackage={pkg}
-            startAge={currentAge}
-            endAge={coverageAge}
-            gender={gender}
-            saved={!!stepData.savedData}
-            onSave={() => {
-              const tiers = getPricingTiersFromPackage(pkg, gender);
-              const premium = calculateTieredPremium(currentAge, coverageAge, tiers);
-              handleAddToCart({ packageName: pkg.name, startAge: currentAge, endAge: coverageAge, premium });
-            }}
-            goBack={goBackStep}
+              selectedPackage={pkg}
+              startAge={currentAge}
+              endAge={coverageAge}
+              gender={gender}
+              saved={!!stepData.savedData}
+              onSave={() => {
+                const tiers = getPricingTiersFromPackage(pkg, gender);
+                const premium = calculateTieredPremium(currentAge, coverageAge, tiers);
+                handleAddToCart({ packageName: pkg.name, startAge: currentAge, endAge: coverageAge, premium });
+              }}
+              goBack={goBackStep}
             />
           ) : (
             <p className="text-red-500">ข้อมูลไม่ครบ ไม่สามารถแสดงเบี้ยประกันได้</p>
           )
         );
-        default:
-          return null;
-        }
-      };
-      
+
+      default:
+        return null;
+    }
+  };
+
+  // ✅ ปรับปรุง flattenedCart ให้มีการจัดการ ID ที่ถูกต้อง
+const flattenedCart = cart.map((entry, index) => ({
+  ...entry,
+  uniqueId: `${entry.packageName}-${entry.startAge}-${entry.endAge}-${index}`
+}));
+
   return (
     <section id="calculator" className="py-8 bg-gray-50">
       <div className="container mx-auto px-3">
@@ -455,11 +545,11 @@ const calculatePremium = () => {
                       }`}>
                         {currentStep > step ? <CheckCircle className="w-5 h-5" color="#496650"/> : step}
                       </div>
-                      {step < 4 && (
+                      {step < 3 && (
                         <div
                           className="w-12 h-1"
                           style={{ backgroundColor: currentStep > step ? '#496650' : '#e5e7eb' }} // #e5e7eb = gray-200
-                      />
+                        />
                       )}
                     </div>
                   ))}
@@ -504,25 +594,47 @@ const calculatePremium = () => {
                 )}
               </div>
 
-              {/* Action Buttons */}
-  
+              {/* HACK: ปัญหาเมื่อเราไม่ใส่ข้อมูล CoverageAge ปุ่ม "คำนวณเบี้ยประกัน" ไม่สามารถทำงานได้
+                * แนวทางการแก้ไข : เรากำหนดให้ค่าของ parseInt(formData.CoverageAge) ? CoverageAge : CurrentAge
+              */}
 
-            {/* HACK: ปัญหาเมื่อเราไม่ใส่ข้อมูล CoverageAge ปุ่ม "คำนวณเบี้ยประกัน" ไม่สามารถทำงานได้
-              * แนวทางการแก้ไข : เรากำหนดให้ค่าของ parseInt(formData.CoverageAge) ? CoverageAge : CurrentAge
-            */}        {/* 🛒 ตะกร้า */}
-      {cart && cart.length > 0 && (
-        <div className="border rounded p-3 space-y-2 mt-4">
-            <h5 className="font-semibold">🛒 ตะกร้าของคุณ:</h5>
-            {cart.map(item => (
-              <div key={item.id} className="flex justify-between text-sm bg-gray-50 p-2 rounded">
-                <span>{item.packageName} (อายุ {item.startAge}–{item.endAge}) – ฿
-                {item.premium?.annual ? item.premium.annual.toLocaleString() : '-'}</span>
-                <button onClick={() => handleRemoveFromCart(item.id)} className="text-red-500 text-xs">ลบ</button>
-               </div>
-              ))}
-          <div className="font-semibold">รวม: ฿{cart.reduce((sum, i) => sum + (i.premium?.annual || 0), 0).toLocaleString()}</div>
-        </div>
-               )}
+              {/* 🛒 ตะกร้า */}
+              {Array.isArray(flattenedCart) && (
+                <div className="border rounded p-3 space-y-2 mt-4">
+                  <h5 className="font-semibold">🛒 ตะกร้าของคุณ:</h5>
+                  {flattenedCart.length > 0 ? (
+                    <>
+                      {flattenedCart.map((entry, index) => (
+                        <div
+                          key={entry.uniqueId || index}
+                          className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded"
+                        >
+                          <span>
+                            {entry.packageName} (อายุ {entry.startAge}–{entry.endAge}) – ฿
+                            {entry.premium?.annual
+                              ? entry.premium.annual.toLocaleString()
+                              : "-"}
+                          </span>
+                          <button
+                            onClick={() => handleRemoveFromCart(entry.packageName)}
+                            className="text-red-500 text-xs hover:text-red-700 px-2 py-1 rounded hover:bg-red-50"
+                          >
+                            ลบ
+                          </button>
+                        </div>
+                      ))}
+                      <div className="font-semibold border-t pt-2">
+                        รวม: ฿
+                        {flattenedCart
+                          .reduce((sum, i) => sum + (i.premium?.annual || 0), 0)
+                          .toLocaleString()}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-500">ยังไม่มีรายการในตะกร้า</p>
+                  )}
+                </div>
+              )}
   
               <div className="space-y-3 pt-4 border-t">
                 <Button 
@@ -546,14 +658,13 @@ const calculatePremium = () => {
               </div>
             </CardContent>
           </Card>
-
-          {/* Results */}
-
+            {/* Results */}
           {/*TODO: แก้ไขวิธีการคำนวณจาก Hard-code ในที่นี้คือ calculatedPremium -> permiumCalculator 
            * 
            */}
-           
           {
+
+
   showResult && calculatedPremium && (() => {
     const packageName = stepData.selectedPackage || 'แพ็กเกจที่เลือก';
     const coverage = parseCoverageFromText(packageName) ?? 0;

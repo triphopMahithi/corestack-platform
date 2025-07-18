@@ -22,6 +22,7 @@ func main() {
 	}
 	db := client.Database(cfg.MongoDBName)
 	database.UserCollection = db.Collection("users")
+	database.CartCollection = db.Collection("cart") // ⭐ เก็บ collection สำหรับ cart
 
 	// Gin setup
 	r := gin.Default()

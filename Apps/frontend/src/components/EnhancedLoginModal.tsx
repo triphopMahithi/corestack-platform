@@ -143,9 +143,6 @@ const handleLineLogin = () => {
                     เข้าสู่ระบบด้วย LINE
                   </Button>
                 </div>
-          <p className="font-medium mb-1">ข้อมูลทดสอบ:</p>
-          <p>Admin: aabbcc / 11233</p>
-          <p>User: ชื่อใดก็ได้ / รหัสใดก็ได้</p>
         </div>
       </DialogContent>
     </Dialog>

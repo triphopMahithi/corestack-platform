@@ -9,13 +9,17 @@ type PremiumInfo struct {
 }
 
 // Struct สำหรับบันทึกลง MongoDB
-type CartItem struct {
-	ID          string      `bson:"_id,omitempty" json:"id,omitempty"`
-	Username    string      `bson:"username" json:"username"`
-	UserID      string      `bson:"userId" json:"userId"` // เพิ่ม UserID เพื่อเก็บ ID ของผู้ใช้
+type CartEntry struct {
 	PackageName string      `bson:"packageName" json:"packageName"`
 	StartAge    int         `bson:"startAge" json:"startAge"`
 	EndAge      int         `bson:"endAge" json:"endAge"`
 	Premium     PremiumInfo `bson:"premium" json:"premium"`
 	DateAdded   time.Time   `bson:"dateAdded" json:"dateAdded"`
+}
+
+type CartItem struct {
+	ID       string      `bson:"_id,omitempty" json:"id,omitempty"`
+	Username string      `bson:"username" json:"username"`
+	UserID   string      `bson:"userId" json:"userId"`
+	Cart     []CartEntry `bson:"cart" json:"cart"`
 }

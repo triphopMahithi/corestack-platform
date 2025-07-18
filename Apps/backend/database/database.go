@@ -14,6 +14,7 @@ import (
 
 var Client *mongo.Client
 var UserCollection *mongo.Collection
+var CartCollection *mongo.Collection
 
 func ConnectToMongoDB(uri string) (*mongo.Client, error) {
 	clientOptions := options.Client().ApplyURI(uri)
