@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { config } from '@/config'
 import axios from 'axios';
-
 const LoginSuccess = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -19,23 +19,25 @@ const LoginSuccess = () => {
 
   localStorage.setItem("authToken", token);
 
-  // ดึง user สดจาก MongoDB ผ่าน API ไม่ใช้ JWT อย่างเดียว
-  axios.get("http://localhost:8080/api/me", {
+  // ล้าง token ออกจาก URL
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  // axios.get("http://localhost:8080/api/me", {
+  axios.get(config.LineMe, {
     headers: { Authorization: `Bearer ${token}` }
   })
   .then(res => {
     const { username, role } = res.data;
     console.log("LoginSuccess - role:", role);
-    console.log("✅ /api/me response:", res.data);
-     // ✅ login ด้วยข้อมูลที่ได้จาก /api/me
+    console.log("/api/me - response:", res.data);
+     // login ด้วยข้อมูลที่ได้จาก /api/me
       loginWithUserData(res.data);
-    login(username, '', role || 'user');// ← อัปเดต AuthContext ด้วย role ล่าสุดจาก DB
     navigate(role === "admin" ? "/admin" : "/");
   })
   .catch(() => {
     navigate("/");
   });
-}, []);
+}, [loginWithUserData, navigate]);
 
 
 
