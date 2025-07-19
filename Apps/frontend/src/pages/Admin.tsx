@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { config} from '@/config';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Save, Plus, Trash2 , Edit} from 'lucide-react';
+import { Settings, Save, Plus, Trash2 , Edit, Package} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
@@ -41,76 +42,8 @@ const Admin = () => {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
   const [packageList, setPackageList] = useState([]); // State to store all packages
-  
-  const [query, setQuery] = useState('');
-  const [packages, setPackages] = useState([]);
-  const [selectedPackage, setSelectedPackage] = useState('');
-  const [noResults, setNoResults] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [showMoreInfo, setShowMoreInfo] = useState(false); // สำหรับการแสดงข้อมูลเพิ่มเติม
-  // promotion state
-  const [promotionType, setPromotionType] = useState('general');  // default type
-  const [promotionName, setPromotionName] = useState('');
-  const [promotionDescription, setPromotionDescription] = useState('');
-  const [discountPercentage, setDiscountPercentage] = useState('');
-  const [validFrom, setValidFrom] = useState('');
-  const [validTo, setValidTo] = useState('');
-  const [packageId, setPackageId] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  /** 
-   *  
-   * Search 
-   * 
-   */
 
-  // ฟังก์ชันค้นหาแพ็กเกจ
-  const handleSearch = async (e) => {
-    const searchQuery = e.target.value;
-    setQuery(searchQuery);
-
-    if (searchQuery.length >= 1) {
-      try {
-        // ส่งคำค้นหาไปที่ backend
-        const response = await axios.get(
-          `http://localhost:8080/api/search?query=${searchQuery}`
-        );
-        if (response.data.length === 0) {
-          setNoResults(true);
-        } else {
-          setPackages(response.data);
-          setNoResults(false);
-        }
-      } catch (error) {
-        console.error("Error fetching packages", error);
-      }
-    } else {
-      setPackages([]);
-    }
-  };
-  const handlePackageSelect = (pkg) => {
-    setSelectedPackage(pkg);
-    setIsDropdownOpen(false); // ปิด dropdown เมื่อเลือกแล้ว
-  };
-
-  // คำนวณอายุที่น้อยที่สุดและมากที่สุดจาก pricing
-  const getMinAge = (pricing) => {
-    if (!pricing || pricing.length === 0) return null;
-    return Math.min(...pricing.map(p => p.ageFrom));
-  };
-
-  const getMaxAge = (pricing) => {
-    if (!pricing || pricing.length === 0) return null;
-    return Math.max(...pricing.map(p => p.ageTo));
-  };
-
-  // คำนวณราคาเพศชาย (Male) และเพศหญิง (Female) ตามช่วงอายุ
-  const getPriceByGender = (pricing, gender) => {
-    if (!pricing || pricing.length === 0) return null;
-    const price = pricing.find(p => p.gender === gender);
-    return price ? price[gender] : 0;
-  };
-
-/**
+  /**
  * 
  *    Page Function
  */
@@ -137,6 +70,94 @@ const Admin = () => {
     }
   };  
   
+  
+  const [query, setQuery] = useState('');
+  const [packages, setPackages] = useState([]);
+  const [selectedPackage, setSelectedPackage] = useState<NewPackage | null>(null);
+  const [noResults, setNoResults] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showMoreInfo, setShowMoreInfo] = useState(false); // สำหรับการแสดงข้อมูลเพิ่มเติม
+  // promotion state
+    /**
+   *  Promotion
+   * 
+   */
+  
+
+  const [promotionListState, setPromotionListState] = useState([]); // ข้อมูลโปรโมชั่น
+  const [loading, setLoading] = useState(true); // สถานะการโหลดข้อมูล
+  const [error, setError] = useState(null); // ข้อผิดพลาด
+  const currentPromotions = promotionListState.slice(
+    (currentPage - 1) * ItemsPerPage,
+    currentPage * ItemsPerPage
+  );
+  
+  const [promotionType, setPromotionType] = useState('general');  // default type
+  const [promotionName, setPromotionName] = useState('');
+  const [promotionDescription, setPromotionDescription] = useState('');
+  const [discountPercentage, setDiscountPercentage] = useState('');
+  const [validFrom, setValidFrom] = useState('');
+  const [validTo, setValidTo] = useState('');
+  const [packageId, setPackageId] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+
+  // edit price
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editPrice, setEditPrice] = useState({
+  ageFrom: '',
+  ageTo: '',
+  male: '',
+  female: '',
+  });
+
+  /** 
+   *  
+   * Search 
+   * 
+   */
+
+  // ฟังก์ชันค้นหาแพ็กเกจ
+  const handleSearch = async (e) => {
+    const searchQuery = e.target.value;
+    setQuery(searchQuery);
+
+    if (searchQuery.length >= 1) {
+      try {
+        const fullURL = `${config.apiBase}/search?query=${searchQuery}`
+        // ส่งคำค้นหาไปที่ backend
+        /** fullURL 
+         * ex : http://localhost:8080/api/search?query=${searchQuery}
+         */
+        const response = await axios.get(fullURL);
+        if (response.data.length === 0) {
+          setNoResults(true);
+        } else {
+          setPackages(response.data);
+          setNoResults(false);
+        }
+      } catch (error) {
+        console.error("Error fetching packages", error);
+      }
+    } else {
+      setPackages([]);
+    }
+  };
+  const handlePackageSelect = (pkg) => {
+    setSelectedPackage(pkg); // pkg should be the full package object
+    setIsDropdownOpen(false); // ปิด dropdown เมื่อเลือกแล้ว
+  };
+
+  // คำนวณอายุที่น้อยที่สุดและมากที่สุดจาก pricing
+  const getMinAge = (pricing) => {
+    if (!pricing || pricing.length === 0) return null;
+    return Math.min(...pricing.map(p => p.ageFrom));
+  };
+
+  const getMaxAge = (pricing) => {
+    if (!pricing || pricing.length === 0) return null;
+    return Math.max(...pricing.map(p => p.ageTo));
+  };
+
 /**
  * 
  *  Package
@@ -148,7 +169,7 @@ const Admin = () => {
   useEffect(() => {
     const fetchPackages = async () => {
       try {
-        const response = await axios.get('http://localhost:8080/api/packages');
+        const response = await axios.get(config.Packages);
         setPackageList(response.data); // Store the received data in state
         console.log('Package - ', response.data)
         // updated ui
@@ -162,8 +183,30 @@ const Admin = () => {
     };
 
     fetchPackages();
-  }, []); // Empty dependency array ensures this runs only once when the component mounts
+  }, [toast]); // Add 'toast' to the dependency array to fix the missing dependency warning
 
+
+  //(Promotion) ดึงข้อมูลโปรโมชั่นจาก API เมื่อ component ถูก mount
+useEffect(() => {
+  let isMounted = true;
+
+  const fetchPromotions = async () => {
+    try {
+      const response = await axios.get(config.Promotions);
+      if (isMounted) setPromotionListState(response.data);
+    } catch (error) {
+      if (isMounted) setError("ไม่สามารถดึงข้อมูลโปรโมชั่นได้");
+    } finally {
+      if (isMounted) setLoading(false);
+    }
+  };
+
+  fetchPromotions();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
   const [newPackage, setNewPackage] = useState<NewPackage>({
     id: '',
     name: '',
@@ -255,7 +298,10 @@ const handleSavePackage = () => {
     pricing: newPricingData 
   };
     // ส่งข้อมูลใหม่ไปที่ backend (สมมุติว่าเป็น POST request)
-    axios.post('http://localhost:8080/api/packages', packageToSave)
+    /**
+     * axios.post('http://localhost:8080/api/packages', packageToSave)
+     */
+    axios.post(config.Packages, packageToSave)
     .then((response) => {
     // เมื่อการส่งข้อมูลสำเร็จ
     toast({
@@ -302,106 +348,15 @@ const handlePricingChange = (index: number, field: string, value: string) => {
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
-  const [monthlyPrice, setMonthlyPrice] = useState('');
-  const [annualPrice, setAnnualPrice] = useState('');
-  
-  const [packagePrices, setPackagePrices] = useState<PackagePrice[]>([
-    { packageName: 'AIA Health Happy Kids', baseMonthly: 500, baseAnnual: 5500 },
-    { packageName: 'AIA H&S (new standard)', baseMonthly: 800, baseAnnual: 9000 },
-    { packageName: 'AIA H&S Extra (new standard)', baseMonthly: 1200, baseAnnual: 13500 },
-    { packageName: 'AIA Health Saver', baseMonthly: 600, baseAnnual: 6800 },
-    { packageName: 'AIA Health Happy', baseMonthly: 900, baseAnnual: 10200 },
-    { packageName: 'AIA Infinite Care (new standard)', baseMonthly: 1500, baseAnnual: 17000 },
-    { packageName: 'HB', baseMonthly: 700, baseAnnual: 8000 },
-    { packageName: 'AIA HB Extra', baseMonthly: 1000, baseAnnual: 11500 },
-    { packageName: 'AIA Health Cancer', baseMonthly: 1200, baseAnnual: 13800 },
-    { packageName: 'AIA Care for Cancer', baseMonthly: 1000, baseAnnual: 11500 },
-    { packageName: 'AIA CI Plus', baseMonthly: 1500, baseAnnual: 17500 },
-    { packageName: 'AIA CI Top Up', baseMonthly: 800, baseAnnual: 9200 },
-    { packageName: 'multi pay-ci plus', baseMonthly: 2000, baseAnnual: 23000 },
-    { packageName: 'Lady Care & Lady Care Plus', baseMonthly: 1100, baseAnnual: 12800 },
-    { packageName: 'AIA TPD', baseMonthly: 600, baseAnnual: 7000 },
-    { packageName: 'Accident Coverage', baseMonthly: 400, baseAnnual: 4500 }
-  ]);
-
-  const allPackages = [
-    'AIA Health Happy Kids',
-    'AIA H&S (new standard)',
-    'AIA H&S Extra (new standard)',
-    'AIA Health Saver',
-    'AIA Health Happy',
-    'AIA Infinite Care (new standard)',
-    'HB',
-    'AIA HB Extra',
-    'ผลประโยชน์ Day Case ของสัญญาเพิ่มเติม HB และ AIA HB Extra',
-    'AIA Health Cancer',
-    'AIA Care for Cancer',
-    'AIA CI Plus',
-    'AIA CI Top Up',
-    'multi pay-ci plus',
-    'Lady Care & Lady Care Plus',
-    'AIA TPD',
-    'AIA Multi-Pay CI',
-    'AIA Total Care',
-    'Accident Coverage'
-  ];
-  const handleSavePrice = () => {
-    if (!selectedPackage || !monthlyPrice || !annualPrice) {
-      toast({
-        title: "ข้อมูลไม่ครบถ้วน",
-        description: "กรุณากรอกข้อมูลให้ครบถ้วน",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const existingIndex = packagePrices.findIndex(p => p.packageName === selectedPackage);
-    
-    if (existingIndex > -1) {
-      // Update existing
-      const newPrices = [...packagePrices];
-      newPrices[existingIndex] = {
-        packageName: selectedPackage,
-        baseMonthly: parseInt(monthlyPrice),
-        baseAnnual: parseInt(annualPrice)
-      };
-      setPackagePrices(newPrices);
-    } else {
-      // Add new
-      setPackagePrices([...packagePrices, {
-        packageName: selectedPackage,
-        baseMonthly: parseInt(monthlyPrice),
-        baseAnnual: parseInt(annualPrice)
-      }]);
-    }
-
-    toast({
-      title: "บันทึกสำเร็จ",
-      description: `อัพเดทราคาสำหรับ ${selectedPackage} แล้ว`,
-    });
-
-    setSelectedPackage('');
-    setMonthlyPrice('');
-    setAnnualPrice('');
-  };
-
-  //const handlePackageSelect = (packageName: string) => {
-  //  setSelectedPackage(packageName);
-  //  const existing = packagePrices.find(p => p.packageName === packageName);
-  //  if (existing) {
-  //    setMonthlyPrice(existing.baseMonthly.toString());
-  //    setAnnualPrice(existing.baseAnnual.toString());
-  //  } else {
-  //    setMonthlyPrice('');
-  //    setAnnualPrice('');
-  //  }
-  //};
 
   const handleDeletePackage = async (packageName: string) => {
     console.log('PackageID - ',packageName)
-    //setPackagePrices(packagePrices.filter(p => p.packageName !== packageName));
     try {
-      const response = await axios.delete(`http://localhost:8080/api/packages/${packageName}`);
+      await axios.delete(`${config.Packages}/${packageName}`);
+
+      // อัปเดต state ทันที (ลบแพ็คเกจออกจาก state)
+      setPackages((prev) => prev.filter((pkg) => pkg.name !== packageName));
+
     } catch (error) {
       toast({
       title: "เกิดข้อผิดพลาด",
@@ -417,55 +372,19 @@ const handlePricingChange = (index: number, field: string, value: string) => {
   };
 
   const handleEditPackage = (packageName) => {
-    // ทำงานบางอย่างที่เกี่ยวกับการแก้ไขแพ็คเกจ
-    // เช่น การแสดงฟอร์มแก้ไขข้อมูลแพ็คเกจ
-    setPackagePrices(packagePrices.filter(p => p.packageName !== packageName));
       toast({
       title: "แก้ไข",
       description: `แก้ไขข้อมูลของ ${packageName} แล้ว`,
     });
 };
 
-  
-  /**
-   *  Promotion
-   * 
-   */
-  
-
-  const [promotionListState, setPromotionListState] = useState([]); // ข้อมูลโปรโมชั่น
-  const [loading, setLoading] = useState(true); // สถานะการโหลดข้อมูล
-  const [error, setError] = useState(null); // ข้อผิดพลาด
-  const currentPromotions = promotionListState.slice(
-    (currentPage - 1) * ItemsPerPage,
-    currentPage * ItemsPerPage
-  );
-  
-
-  // ดึงข้อมูลโปรโมชั่นจาก API เมื่อ component ถูก mount
-  useEffect(() => {
-    const fetchPromotions = async () => {
-      try {
-        const response = await axios.get('http://localhost:8080/api/promotions');
-        setPromotionListState(response.data); // เก็บข้อมูลที่ได้ใน state
-        console.log("log - interface promotions :",response.data);
-      } catch (error) {
-        setError("ไม่สามารถดึงข้อมูลโปรโมชั่นได้");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPromotions();
-  }, []); // Empty dependency array หมายความว่า useEffect จะทำงานเพียงครั้งเดียวเมื่อ component ถูก mount
-
-
-  const handleDeletePromotion = async (promotionId: string) => {
-    console.log("promotionId -",promotionId)
+const handleDeletePromotion = async (promotionId: string) => {
+  console.log("promotionId -",promotionId)
 
   try {
     // ส่งคำขอ DELETE ไปยัง backend
-    const response = await axios.delete(`http://localhost:8080/api/promotions/${promotionId}`);
+    // const response = await axios.delete(`http://localhost:8080/api/promotions/${promotionId}`);
+    const response = await axios.delete(`${config.Promotions}/${promotionId}`);
     console.log("Response from delete:", response);    
     toast({
       title: "ลบโปรโมชั่นสำเร็จ",
@@ -531,8 +450,8 @@ const handleAddPromotion = async () => {
 
   try {
     // ส่งข้อมูลโปรโมชั่นไปยัง backend
-    //await axios.post('http://localhost:8080/api/promotions', promotionData);
-    const response = await axios.post('http://localhost:8080/api/promotions', promotionData);
+    //const response = await axios.post('http://localhost:8080/api/promotions', promotionData);
+    const response = await axios.post(config.Promotions, promotionData);
     // รับข้อมูลโปรโมชั่นที่ถูกสร้างพร้อม _id
     const createdPromotion = response.data.promotion;
 
@@ -557,6 +476,64 @@ const handleAddPromotion = async () => {
     });
   }
 }
+
+const handleSelect = (pkg) => {
+  setSelectedPackage(pkg);   // เก็บข้อมูลแพ็กเกจที่เลือก
+  setQuery(pkg.name);        // ใส่ชื่อแพ็กเกจลงในช่องค้นหา
+  setIsDropdownOpen(false);  // ปิด dropdown
+};
+
+
+// show-info option 
+const handleEditPricing = (index: number) => {
+  const p = selectedPackage.pricing[index];
+  setEditIndex(index);
+  setEditPrice({
+    ageFrom: p.ageFrom.toString(),
+    ageTo: p.ageTo.toString(),
+    male: p.male.toString(),
+    female: p.female.toString(),
+  });
+};
+
+const updatePricingInDB = async (updatedPricing: Pricing, index: number) => {
+  try {
+    const response = await fetch(`${config.Packages}/${selectedPackage.id}/pricing/${index}`, {
+      method: 'PATCH', // ✅ ต้องเป็น PATCH ไม่ใช่ GET หรือ POST
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedPricing),
+    });
+
+    if (!response.ok) throw new Error("Update failed");
+
+    const data = await response.json();
+    toast({ title: "สำเร็จ", description: "อัปเดตราคาเรียบร้อยแล้ว" });
+  } catch (error) {
+    console.error("Update error:", error);
+    toast({ title: "ผิดพลาด", description: "ไม่สามารถอัปเดตได้" });
+  }
+};
+
+const handleSavePricing = async (index: number) => {
+  const newData = {
+    ageFrom: parseInt(editPrice.ageFrom),
+    ageTo: parseInt(editPrice.ageTo),
+    male: parseFloat(editPrice.male),
+    female: parseFloat(editPrice.female),
+  };
+
+  // อัปเดตใน frontend state (UI)
+  const updated = [...selectedPackage.pricing];
+  updated[index] = newData;
+  setSelectedPackage({ ...selectedPackage, pricing: updated });
+
+  // ✅ อัปเดตไปยัง backend
+  await updatePricingInDB(newData, index);
+  setEditIndex(null);
+};
+
 
   if (loading) {
     return <p>กำลังโหลดข้อมูล...</p>;
@@ -597,120 +574,165 @@ const handleAddPromotion = async () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
         <div className="space-y-4">
- <div>
-      {/* ช่องค้นหาสำหรับการพิมพ์ */}
-      <input
-        type="text"
-        value={query}
-        onChange={handleSearch}
-        placeholder="ค้นหาแพ็กเกจ..."
-        onFocus={() => setIsDropdownOpen(true)} // เปิด dropdown เมื่อคลิกช่องค้นหา
-      />
+  <div className="relative w-full max-w-lg">
+  <input
+    type="text"
+    value={query}
+    onChange={handleSearch}
+    placeholder="ค้นหาแพ็กเกจ..."
+    onFocus={() => setIsDropdownOpen(true)}
+    className="w-full px-4 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-brand-green hover:border-transparent transition duration-200"
+  />
 
-      {/* แสดงผลลัพธ์การค้นหาผ่าน div dropdown */}
-      <div className="relative">
-        {isDropdownOpen && (
-          <div className="absolute z-10 w-full bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
-            {noResults ? (
-              <div className="p-2 text-center text-gray-500">ไม่พบข้อมูล</div>
-            ) : (
-              packages.map((pkg) => (
-                <div
-                  key={pkg.id}
-                  className="p-2 cursor-pointer hover:bg-gray-200"
-                  onClick={() => handlePackageSelect(pkg)} // เมื่อเลือกแพ็กเกจ
-                >
-                  {pkg.name}
-                </div>
-              ))
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* แสดงข้อมูลของแพ็กเกจที่เลือก */}
-      {selectedPackage && (
-        <div className="mt-4">
-          <h3 className="text-xl font-semibold">ข้อมูลแพ็กเกจ</h3>
-          <p><strong>ชื่อแพ็กเกจ:</strong> {selectedPackage.name}</p>
-
-          {/* แสดง AgeFrom และ AgeTo ที่น้อยที่สุดและมากที่สุดจาก pricing */}
-          <div>
-            {selectedPackage.pricing && selectedPackage.pricing.length > 0 ? (
-              <p>
-                อายุที่น้อยที่สุด: {getMinAge(selectedPackage.pricing)} <br />
-                อายุที่มากที่สุด: {getMaxAge(selectedPackage.pricing)}
-              </p>
-            ) : (
-              <p>ไม่มีข้อมูลช่วงอายุ</p>
-            )}
-          </div>
-          {/* ปุ่มแสดงข้อมูลเพิ่มเติม */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowMoreInfo(!showMoreInfo)} // Toggle การแสดงข้อมูลเพิ่มเติม
-            className="mt-4"
-          >
-            {showMoreInfo ? "ซ่อนข้อมูลเพิ่มเติม" : "แสดงข้อมูลเพิ่มเติม"}
-          </Button>
-
-          {/* แสดงข้อมูลเพิ่มเติมเมื่อคลิก */}
-{showMoreInfo && (
-  <div className="mt-4">
-    <p><strong>หมวดหมู่:</strong> {selectedPackage.categoryId}</p>
-    <p><strong>ข้อจำกัดเพศ:</strong> {selectedPackage.genderRestriction}</p>
-
-    {/* แสดงช่วงอายุทั้งหมด */}
-    <p><strong>ช่วงอายุ:</strong></p>
-    <div className="grid grid-cols-2 gap-4">
-      
-      {selectedPackage.pricing.map((price, index) => (
-        <div key={index} className="flex justify-between">
-          <div className="w-1/2">
-            <strong>{price.ageFrom} - {price.ageTo} ปี</strong>
-          </div>
-          <div className="w-1/2 text-right">
-            {/* แสดงราคาของเพศหญิงและเพศชาย */}
-            <div>
-              <strong>ราคาหญิง:</strong> ฿{price.female.toLocaleString()}
-            </div>
-            <div>
-              <strong>ราคาชาย:</strong> ฿{price.male.toLocaleString()}
-            </div>
-          </div>
+  {isDropdownOpen && (
+  <div className="absolute top-full mt-1 w-full bg-white border border-gray-200 rounded-2xl shadow-lg z-10">
+    {packages.length > 0 ? (
+      packages.map((pkg, index) => (
+        <div
+          key={index}
+          className="px-4 py-2 hover:bg-gray-100 cursor-pointer rounded-2xl"
+          onClick={() => handleSelect(pkg)}
+        >
+          {pkg.name}
         </div>
-      ))}
+      ))
+    ) : query.length > 0 ? (
+      <div className="px-4 py-2 text-gray-400">ไม่พบผลลัพธ์</div>
+    ) : null}
+  </div>
+)}
+
+</div>
+<div>
+  {selectedPackage && typeof selectedPackage === 'object' && (
+  <div className="mt-6 p-6 bg-white rounded-xl shadow-md space-y-4">
+    <h3 className="text-2xl font-bold text-brand-green">ข้อมูลแพ็กเกจ</h3>
+    <p className="text-gray-800">
+      <span className="font-medium">ชื่อแพ็กเกจ:</span> {selectedPackage.name}
+    </p>
+
+    <div className="text-gray-700">
+      {selectedPackage.pricing && selectedPackage.pricing.length > 0 ? (
+        <>
+          <p>
+            <span className="font-medium">อายุที่น้อยที่สุด:</span> {getMinAge(selectedPackage.pricing)} ปี
+          </p>
+          <p>
+            <span className="font-medium">อายุที่มากที่สุด:</span> {getMaxAge(selectedPackage.pricing)} ปี
+          </p>
+        </>
+      ) : (
+        <p className="text-sm text-gray-500">ไม่มีข้อมูลช่วงอายุ</p>
+      )}
+    </div>
+
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => setShowMoreInfo(!showMoreInfo)}
+      className="mt-2"
+    >
+      {showMoreInfo ? "ซ่อนข้อมูลเพิ่มเติม" : "แสดงข้อมูลเพิ่มเติม"}
+    </Button>
+
+    {showMoreInfo && (
+      <div className="mt-4 space-y-2 text-gray-800">
+        <p><span className="font-medium">หมวดหมู่:</span> {selectedPackage.categoryId}</p>
+        <p><span className="font-medium">ข้อจำกัดเพศ:</span> {selectedPackage.genderRestriction}</p>
+
+        <p className="font-semibold mt-4">ช่วงอายุและราคา:</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {selectedPackage.pricing.map((price, index) => (
+            <div
+              key={index}
+              className="bg-gray-50 border rounded-lg p-3 flex flex-col justify-between"
+            >
+              <p className="font-semibold text-brand-green">{price.ageFrom} - {price.ageTo} ปี</p>
+              <div className="mt-1 text-sm">
+                <p><strong>ราคาหญิง:</strong> ฿{price.female.toLocaleString()}</p>
+                <p><strong>ราคาชาย:</strong> ฿{price.male.toLocaleString()}</p>
+              </div>
+
+               <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 self-end"
+                onClick={() => handleEditPricing(index)}
+                >
+                  แก้ไข
+                </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+    {editIndex !== null && (
+  <div className="mt-4 p-4 border rounded bg-gray-100 space-y-2">
+    <h4 className="text-lg font-semibold text-brand-green">แก้ไขช่วงอายุและราคา</h4>
+    <div className="grid grid-cols-2 gap-4">
+      <Input
+        type="number"
+        value={editPrice.ageFrom}
+        onChange={(e) => setEditPrice({ ...editPrice, ageFrom: e.target.value })}
+        placeholder="อายุจาก"
+      />
+      <Input
+        type="number"
+        value={editPrice.ageTo}
+        onChange={(e) => setEditPrice({ ...editPrice, ageTo: e.target.value })}
+        placeholder="อายุถึง"
+      />
+      <Input
+        type="number"
+        value={editPrice.female}
+        onChange={(e) => setEditPrice({ ...editPrice, female: e.target.value })}
+        placeholder="ราคาหญิง"
+      />
+      <Input
+        type="number"
+        value={editPrice.male}
+        onChange={(e) => setEditPrice({ ...editPrice, male: e.target.value })}
+        placeholder="ราคาชาย"
+      />
+    </div>
+
+    <div className="flex justify-end space-x-2 mt-4">
+      <Button variant="ghost" onClick={() => setEditIndex(null)}>ยกเลิก</Button>
+      <Button
+        onClick={() => handleSavePricing(editIndex)}
+      >
+        บันทึก
+      </Button>
     </div>
   </div>
 )}
 
-          <div className="flex space-x-2 mt-4">
-            {/* ปุ่มแก้ไข */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleEditPackage(selectedPackage.id)}
-              className="text-blue-600 hover:text-blue-700"
-            >
-              แก้ไข
-            </Button>
+    <div className="flex gap-4 mt-6">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleEditPackage(selectedPackage)}
+        className="text-blue-600 hover:text-white hover:bg-blue-600 transition"
+      >
+        แก้ไข
+      </Button>
 
-            {/* ปุ่มลบ */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDeletePackage(selectedPackage.id)}
-              className="text-red-600 hover:text-red-700"
-            >
-              ลบ
-            </Button>
-          </div>
-        </div>
-      )}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleDeletePackage(selectedPackage.id)}
+        className="text-red-600 hover:text-white hover:bg-red-600 transition"
+      >
+        ลบ
+      </Button>
     </div>
-        </div>
-                  </CardContent>
+  </div>
+)}
+
+</div>
+
+      </div>
+</CardContent>
                 </Card>
 
                 <Card>
@@ -773,18 +795,6 @@ const handleAddPromotion = async () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* ฟอร์มสำหรับกรอกข้อมูลแพ็คเกจ */}
-            {/** 
-            <div className="space-y-2">
-              <Label htmlFor="packageId">ID แพ็คเกจ</Label>
-              <Input
-                id="packageId"
-                value={newPackage.id}
-                onChange={(e) => setNewPackage({ ...newPackage, id: e.target.value })}
-                placeholder="กรอก ID แพ็คเกจ"
-              />
-            </div>
-            */}
             <div className="space-y-2">
               <Label htmlFor="packageName">ชื่อแพ็คเกจ</Label>
               <Input
@@ -878,108 +888,103 @@ const handleAddPromotion = async () => {
                     <CardTitle>ตั้งค่าระบบ</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-      <h4 className="font-medium">เพิ่มโปรโมชั่น</h4>
-      {/* ตัวเลือกประเภทโปรโมชั่น */}
-      <div>
-        <label>ประเภทโปรโมชั่น</label>
-        <div className="space-x-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPromotionType('general')}
-            className={promotionType === 'general' ? 'bg-blue-500 text-white' : ''}
-          >
-            โปรโมชั่นทั่วไป
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPromotionType('package')}
-            className={promotionType === 'package' ? 'bg-blue-500 text-white' : ''}
-          >
-            โปรโมชั่นเฉพาะแพ็คเกจ
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPromotionType('category')}
-            className={promotionType === 'category' ? 'bg-blue-500 text-white' : ''}
-          >
-            โปรโมชั่นเฉพาะสัญญา
-          </Button>
-        </div>
-      </div>
+<div className="max-w-xl mx-auto space-y-4 bg-white p-6 rounded-2xl shadow-md border border-gray-200">
+  <h2 className="text-xl font-semibold text-gray-700">เพิ่มโปรโมชั่นใหม่</h2>
 
-      {/* ฟอร์มกรอกชื่อโปรโมชั่นและรายละเอียด */}
-      <input
-        type="text"
-        placeholder="ชื่อโปรโมชั่น"
-        value={promotionName}
-        onChange={(e) => setPromotionName(e.target.value)}
-        className="input"
-      />
-      <textarea
-        placeholder="รายละเอียดโปรโมชั่น"
-        value={promotionDescription}
-        onChange={(e) => setPromotionDescription(e.target.value)}
-        className="textarea"
-      />
-      <input
-        type="number"
-        placeholder="เปอร์เซ็นต์ส่วนลด"
-        value={discountPercentage}
-        onChange={(e) => setDiscountPercentage(e.target.value)}
-        className="input"
-      />
+  {/* ฟอร์มกรอกชื่อโปรโมชั่นและรายละเอียด */}
+  <div className="space-y-2">
+    <label className="block text-sm font-medium text-gray-600">ชื่อโปรโมชั่น</label>
+    <input
+      type="text"
+      placeholder="กรอกชื่อโปรโมชั่น"
+      value={promotionName}
+      onChange={(e) => setPromotionName(e.target.value)}
+      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
+    />
+  </div>
+
+  <div className="space-y-2">
+    <label className="block text-sm font-medium text-gray-600">รายละเอียดโปรโมชั่น</label>
+    <textarea
+      placeholder="กรอกรายละเอียด"
+      value={promotionDescription}
+      onChange={(e) => setPromotionDescription(e.target.value)}
+      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
+    />
+  </div>
+
+  <div className="space-y-2">
+    <label className="block text-sm font-medium text-gray-600">เปอร์เซ็นต์ส่วนลด (%)</label>
+    <input
+      type="number"
+      placeholder="เช่น 10"
+      value={discountPercentage}
+      onChange={(e) => setDiscountPercentage(e.target.value)}
+      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
+    />
+  </div>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-600">วันที่เริ่มต้น</label>
       <input
         type="date"
-        placeholder="วันที่เริ่มต้น"
         value={validFrom}
         onChange={(e) => setValidFrom(e.target.value)}
-        className="input"
+        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
       />
+    </div>
+
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-600">วันที่สิ้นสุด</label>
       <input
         type="date"
-        placeholder="วันที่สิ้นสุด"
         value={validTo}
         onChange={(e) => setValidTo(e.target.value)}
-        className="input"
+        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
       />
-
-      {/* เงื่อนไขสำหรับ "โปรโมชั่นเฉพาะแพ็คเกจ" */}
-      {promotionType === 'package' && (
-        <div className="space-y-2">
-          <label>กรุณากรอกชื่อแพ็คเกจที่โปรโมชั่นใช้ได้</label>
-          <input
-            type="text"
-            placeholder="ชื่อแพ็คเกจ"
-            value={packageId}
-            onChange={(e) => setPackageId(e.target.value)}
-            className="input"
-          />
-        </div>
-      )}
-
-      {/* เงื่อนไขสำหรับ "โปรโมชั่นเฉพาะ categoryId" */}
-      {promotionType === 'category' && (
-        <div className="space-y-2">
-          <label>กรุณากรอกสัญญาที่โปรโมชั่นใช้ได้</label>
-          <input
-            type="text"
-            placeholder="ชื่อสัญญา"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="input"
-          />
-        </div>
-      )}
-
-      {/* ปุ่มเพิ่มโปรโมชั่น */}
-      <Button onClick={handleAddPromotion} className="btn btn-primary">
-        เพิ่มโปรโมชั่น
-      </Button>
     </div>
+  </div>
+
+  {/* เงื่อนไขสำหรับ "โปรโมชั่นเฉพาะแพ็คเกจ" */}
+  {promotionType === 'package' && (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-600">ชื่อแพ็คเกจที่ใช้โปรโมชั่นได้</label>
+      <input
+        type="text"
+        placeholder="กรอกชื่อแพ็คเกจ"
+        value={packageId}
+        onChange={(e) => setPackageId(e.target.value)}
+        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
+      />
+    </div>
+  )}
+
+  {/* เงื่อนไขสำหรับ "โปรโมชั่นเฉพาะ categoryId" */}
+  {promotionType === 'category' && (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-600">ชื่อสัญญาที่ใช้โปรโมชั่นได้</label>
+      <input
+        type="text"
+        placeholder="กรอกชื่อสัญญา"
+        value={categoryId}
+        onChange={(e) => setCategoryId(e.target.value)}
+        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
+      />
+    </div>
+  )}
+
+  {/* ปุ่มเพิ่มโปรโมชั่น */}
+  <div className="pt-4">
+<Button
+  onClick={handleAddPromotion}
+  className="w-full bg-brand-green text-black hover:bg-brand-green/90 rounded-xl py-3 text-base font-semibold shadow-md transition duration-200"
+>
+  เพิ่มโปรโมชั่น
+</Button>
+  </div>
+</div>
+
                   </CardContent>
 
 
