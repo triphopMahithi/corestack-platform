@@ -65,6 +65,14 @@ interface User {
   username?: string;
 }
 
+interface Plan {
+  id: string;
+  name: string;
+  description: string;
+  basePremium: number;
+}
+
+
 interface SelectedPackage {
   id: string;
   name: string;
@@ -97,7 +105,7 @@ const InsuranceCalculator = () => {
   // การเก็บสถานะข้อมูลที่เรียกใช้มาจาก API
   const [packagesData, setPackagesData] = useState<any[]>([]);
   const [categoriesData, setCategoriesData] = useState<Record<string, string[]>>({});
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartEntry[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [stepData, setStepData] = useState<StepData>({
     selectedPackage: '',
@@ -117,6 +125,7 @@ const InsuranceCalculator = () => {
   // Category selection states
   const [selectedPackages, setSelectedPackages] = useState<SelectedPackage[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [selectedPlans, setSelectedPlans] = useState<Plan[]>([]);
   const [showAllPlans, setShowAllPlans] = useState(false);
 
   const { toast } = useToast();
@@ -668,18 +677,15 @@ const flattenedCart = cart.map((entry, index) => ({
   showResult && calculatedPremium && (() => {
     const packageName = stepData.selectedPackage || 'แพ็กเกจที่เลือก';
     const coverage = parseCoverageFromText(packageName) ?? 0;
+    
 
     return (
       <QuoteResult 
         formData={formData}
         premium={calculatedPremium}
-        selectedPackages={[{
-          id: '1',
-          name: packageName,
-          coverage: coverage,
-          premium: calculatedPremium.annual
-        }]}
-        selectedPlans={[]}
+        selectedPlans={selectedPlans}
+        cartItems={cart}
+
       />
     );
   })()
