@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -67,6 +68,63 @@ func SearchPackagesHandler(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, results)
+	}
+}
+
+// Update Prcie
+func UpdatePricingHandler(db *mongo.Database) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		packageID := c.Param("id")
+		indexStr := c.Param("index")
+
+		index, err := strconv.Atoi(indexStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid index"})
+			return
+		}
+
+		var input models.Pricing
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		objID, err := primitive.ObjectIDFromHex(packageID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid package ID"})
+			return
+		}
+
+		collection := db.Collection("packages")
+
+		// ดึง document ปัจจุบัน
+		var pkg models.Package
+		err = collection.FindOne(context.TODO(), bson.M{"_id": objID}).Decode(&pkg)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "package not found"})
+			return
+		}
+
+		if index < 0 || index >= len(pkg.Pricing) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pricing index"})
+			return
+		}
+
+		// แก้ไขข้อมูล pricing ที่ตำแหน่ง index
+		pkg.Pricing[index] = input
+
+		// บันทึกกลับเข้า DB
+		update := bson.M{"$set": bson.M{"pricing": pkg.Pricing}}
+		_, err = collection.UpdateByID(context.TODO(), objID, update)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update package"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "pricing updated successfully",
+			"pricing": input,
+		})
 	}
 }
 
