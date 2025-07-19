@@ -32,7 +32,7 @@ func main() {
 
 	// Cross-origin resource sharing (CORS)
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:8081", "http://192.168.3.58:8081"}, // ใส่ origin ของ frontend
+		AllowOrigins:     []string{"http://localhost:8081"}, // ใส่ origin ของ frontend
 		AllowMethods:     []string{"GET", "POST", "OPTIONS", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
