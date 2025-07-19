@@ -656,14 +656,34 @@ const handleAddPromotion = async () => {
           </Button>
 
           {/* แสดงข้อมูลเพิ่มเติมเมื่อคลิก */}
-          {showMoreInfo && (
-            <div className="mt-4">
-              <p><strong>หมวดหมู่:</strong> {selectedPackage.categoryId}</p>
-              <p><strong>ข้อจำกัดเพศ:</strong> {selectedPackage.genderRestriction}</p>
-              <p><strong>อายุขั้นต่ำ:</strong> {selectedPackage.minAge}</p>
-              <p><strong>อายุสูงสุด:</strong> {selectedPackage.maxAge}</p>
+{showMoreInfo && (
+  <div className="mt-4">
+    <p><strong>หมวดหมู่:</strong> {selectedPackage.categoryId}</p>
+    <p><strong>ข้อจำกัดเพศ:</strong> {selectedPackage.genderRestriction}</p>
+
+    {/* แสดงช่วงอายุทั้งหมด */}
+    <p><strong>ช่วงอายุ:</strong></p>
+    <div className="grid grid-cols-2 gap-4">
+      
+      {selectedPackage.pricing.map((price, index) => (
+        <div key={index} className="flex justify-between">
+          <div className="w-1/2">
+            <strong>{price.ageFrom} - {price.ageTo} ปี</strong>
+          </div>
+          <div className="w-1/2 text-right">
+            {/* แสดงราคาของเพศหญิงและเพศชาย */}
+            <div>
+              <strong>ราคาหญิง:</strong> ฿{price.female.toLocaleString()}
             </div>
-          )}
+            <div>
+              <strong>ราคาชาย:</strong> ฿{price.male.toLocaleString()}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
           <div className="flex space-x-2 mt-4">
             {/* ปุ่มแก้ไข */}

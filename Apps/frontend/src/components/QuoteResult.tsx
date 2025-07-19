@@ -1,11 +1,19 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Calendar, Share2 } from 'lucide-react';
+import { Download, Calendar, Share2, Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
-import { calculateTieredPremium, getPricingTiersFromPackage } from '@/utils/premiumCalculator';
+
+interface CartEntry {
+  packageName: string;
+  startAge: number;
+  endAge: number;
+  premium: {
+    annual: number;
+  };
+  dateAdded: string;
+}
 
 interface QuoteResultProps {
   formData: {
@@ -14,7 +22,6 @@ interface QuoteResultProps {
     coverageAge: string;
     paymentFrequency: string;
     plans: string[];
-    packages: string[];
   };
   premium: {
     monthly: number;
@@ -23,48 +30,40 @@ interface QuoteResultProps {
     annual: number;
     total: number;
   };
-  selectedPackages: Array<{
-    id: string;
-    name: string;
-    coverage: number;
-    premium: number;
-  }>;
   selectedPlans: Array<{
     id: string;
     name: string;
     description: string;
     basePremium: number;
   }>;
+  cartItems: CartEntry[];
 }
 
-const QuoteResult: React.FC<QuoteResultProps> = ({ 
-  formData, 
-  premium, 
-  selectedPackages, 
-  selectedPlans 
+const QuoteResult: React.FC<QuoteResultProps> = ({
+  formData,
+  premium,
+  selectedPlans,
+  cartItems,
 }) => {
   const { toast } = useToast();
-
   const genderText = formData.gender === 'male' ? 'ชาย' : 'หญิง';
 
   const generatePDF = async () => {
     toast({
-      title: "กำลังสร้าง PDF",
-      description: "กรุณารอสักครู่...",
+      title: 'กำลังสร้าง PDF',
+      description: 'กรุณารอสักครู่...',
     });
-    
     try {
       await generateQuotePDF('quote-content', 'insurance-quote');
-      
       toast({
-        title: "ดาวน์โหลดสำเร็จ",
-        description: "ใบเสนอราคาถูกบันทึกแล้ว",
+        title: 'ดาวน์โหลดสำเร็จ',
+        description: 'ใบเสนอราคาถูกบันทึกแล้ว',
       });
     } catch (error) {
       toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถสร้าง PDF ได้",
-        variant: "destructive",
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถสร้าง PDF ได้',
+        variant: 'destructive',
       });
     }
   };
@@ -79,180 +78,137 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
     } else {
       navigator.clipboard.writeText(window.location.href);
       toast({
-        title: "คัดลอกลิงก์แล้ว",
-        description: "สามารถแชร์ลิงก์นี้ได้",
+        title: 'คัดลอกลิงก์แล้ว',
+        description: 'สามารถแชร์ลิงก์นี้ได้',
       });
     }
   };
 
+  const totalPlanPremium = selectedPlans.reduce((sum, plan) => sum + (plan.basePremium || 0), 0);
+  const totalCartPremium = cartItems.reduce((sum, item) => sum + (item.premium?.annual || 0), 0);
+  const grandTotal = totalPlanPremium + totalCartPremium;
+
   return (
-    <div className="space-y-6">
-      {/* PDF Content Container */}
-      <div id="quote-content" className="bg-white">
-        <Card className="shadow-lg border border-brand-green/20">
-          <CardHeader className="bg-gradient-to-r from-brand-green to-brand-green/80 text-white py-6">
-            <CardTitle className="flex items-center gap-3 text-xl">
+    <div className="space-y-6 px-4 md:px-0">
+      {/* PDF Content */}
+      <div id="quote-content" className="bg-background">
+        <Card className="shadow-xl border-2 border-brand-green/20 overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-brand-green via-brand-green to-brand-green-dark p-6 text-white">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm">
+                  <Building2 className="w-8 h-8 text-brand-green"/>
+                </div>
+                <h2 className="text-2xl font-bold text-brand-green bg-white/90 px-3 py-1 rounded-lg">
+                  ANAN IP CO., LTD.
+                </h2>
+              </div>
+              <div className="text-right text-sm text-brand-green">
+                <div>วันที่ออกใบเสนอราคา</div>
+                <div className="text-right font-semibold text-brand-green">
+                  {new Date().toLocaleDateString('th-TH')}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Body */}
+          <CardHeader className="bg-gradient-to-r from-brand-green-light to-brand-gold-light border-b border-brand-green/10">
+            <CardTitle className="flex items-center gap-3 text-xl text-brand-green">
               <Calendar className="w-6 h-6" />
               ใบเสนอราคาเบี้ยประกัน
             </CardTitle>
           </CardHeader>
+
           <CardContent className="p-6 space-y-6">
-            
-            {/* Company Logo Area */}
-            <div className="text-center pb-6 border-b border-brand-green/20">
-              <div className="flex items-center justify-center space-x-4 mb-4">
-                <div className="w-16 h-16 brand-green rounded-full flex items-center justify-center shadow-lg">
-                  <span className="text-white font-bold text-2xl">A</span>
-                </div>
-                <div className="text-left">
-                  <h3 className="text-2xl font-bold text-brand-green">ANAN IP CO., LTD.</h3>
-                  <p className="text-brand-gold font-medium">Insurance Calculator Co., Ltd.</p>
-                </div>
-              </div>
-              <div className="bg-brand-green/5 p-3 rounded-lg">
-                <p className="text-sm text-brand-green font-medium">
-                  วันที่ออกใบเสนอราคา: {new Date().toLocaleDateString('th-TH', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </p>
+            {/* ข้อมูลผู้เอาประกัน */}
+            <div className="bg-brand-green/10 p-6 rounded-xl border border-brand-green/20">
+              <h4 className="font-bold text-brand-green mb-4 text-lg flex items-center gap-2">
+                <div className="w-1 h-6 bg-brand-green rounded-full"></div>
+                ข้อมูลผู้เอาประกัน
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { label: 'เพศ:', value: genderText },
+                  { label: 'อายุปัจจุบัน:', value: `${formData.currentAge} ปี` },
+                  { label: 'ความคุ้มครองถึงอายุ:', value: `${formData.coverageAge} ปี` },
+                ].map((item, i) => (
+                  <div
+                    key={i}
+                    className="bg-brand-green/10 text-brand-green p-4 rounded-lg shadow-sm border border-brand-green/20 text-center md:text-left transition-shadow hover:shadow-md"
+                  >
+                    <span className="text-sm font-semibold text-brand-gold">{item.label}</span>
+                    <div className="text-xl font-bold mt-1">{item.value}</div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Customer Information */}
-            <div className="space-y-4">
-              <div className="bg-gradient-to-r from-brand-green/5 to-brand-gold/5 p-4 rounded-lg">
-                <h4 className="font-bold text-brand-green mb-4 text-lg border-b border-brand-green/20 pb-2">
-                  ข้อมูลผู้เอาประกัน
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-white p-3 rounded-lg shadow-sm">
-                    <span className="text-brand-gold text-sm font-medium">เพศ:</span>
-                    <div className="text-brand-green font-bold text-lg">{genderText}</div>
-                  </div>
-                  <div className="bg-white p-3 rounded-lg shadow-sm">
-                    <span className="text-brand-gold text-sm font-medium">อายุปัจจุบัน:</span>
-                    <div className="text-brand-green font-bold text-lg">{formData.currentAge} ปี</div>
-                  </div>
-                  <div className="bg-white p-3 rounded-lg shadow-sm">
-                    <span className="text-brand-gold text-sm font-medium">ความคุ้มครองจนถึงอายุ:</span>
-                    <div className="text-brand-green font-bold text-lg">{formData.coverageAge} ปี</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-r from-brand-green/5 to-brand-gold/5 p-4 rounded-lg">
-                <h4 className="font-bold text-brand-green mb-4 text-lg border-b border-brand-green/20 pb-2">
-                  แผนประกันที่เลือก
+            {/* แพ็กเกจเสริม */}
+            {cartItems.length > 0 && (
+              <div className="bg-brand-green/10 p-6 rounded-xl border border-brand-gold/20">
+                <h4 className="font-bold text-brand-green mb-4 text-lg flex items-center gap-2">
+                  <div className="w-1 h-6 bg-brand-gold rounded-full"></div>
+                  แพ็กเกจเสริมที่เลือก
                 </h4>
                 <div className="space-y-3">
-                  {selectedPlans.map((plan) => (
-                    <div key={plan.id} className="bg-white p-4 rounded-lg shadow-sm border border-brand-green/10">
-                      <div className="font-bold text-brand-green text-lg">{plan.name}</div>
-                      <div className="text-gray-600 mt-1">{plan.description}</div>
-                      <div className="text-brand-gold font-bold mt-2 text-lg">
-                        ฿{plan.basePremium.toLocaleString()} บาท/ปี
+                  {cartItems.map((pkg, index) => (
+                    <div
+                      key={index}
+                      className="bg-brand-green/5 p-4 rounded-lg border border-brand-green/20 shadow-sm text-brand-green hover:shadow-md transition-all"
+                    >
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                        <div>
+                          <div className="font-bold text-lg">{pkg.packageName}</div>
+                          <div className="text-sm text-brand-green/70 mt-1">
+                            ช่วงอายุ: {pkg.startAge} - {pkg.endAge} ปี
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-brand-gold font-bold text-lg">
+                            +฿{pkg.premium?.annual?.toLocaleString() || 0}
+                          </div>
+                          <div className="text-sm text-brand-green/60">บาท/ปี</div>
+                        </div>
                       </div>
                     </div>
                   ))}
-                  
-                  {selectedPackages.length > 0 && (
-                    <div className="mt-4">
-                      <div className="font-medium text-brand-green mb-3">แพ็กเกจเสริม:</div>
-                      <div className="space-y-2">
-                        {selectedPackages.map((pkg) => (
-                          <div key={pkg.id} className="bg-brand-gold/10 p-3 rounded-lg border border-brand-gold/20">
-                            <div className="font-bold text-brand-green">{pkg.name}</div>
-                            <div className="text-sm text-gray-600">
-                              ความคุ้มครอง: {pkg.coverage.toLocaleString()} บาท
-                            </div>
-                            <div className="text-brand-gold font-bold text-sm">
-                              +฿{pkg.premium.toLocaleString()} บาท/ปี
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Premium Breakdown */}
-            <div className="bg-gradient-to-br from-brand-green/10 to-brand-gold/10 p-6 rounded-lg border border-brand-green/20">
-              <h4 className="font-bold text-brand-green mb-6 text-center text-xl">
-                เบี้ยประกันรวม
+            {/* เบี้ยประกันรวม */}
+            <div className="bg-brand-green/5 p-8 rounded-lg border-2 border-brand-green/30 shadow-sm text-center">
+              <h4 className="font-bold text-brand-green mb-6 text-xl border-b border-brand-green/20 pb-4">
+                เบี้ยประกันรวมทั้งหมด
               </h4>
-              
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="text-center p-4 bg-white rounded-lg shadow-md border border-brand-green/10">
-                  <div className="text-2xl font-bold text-brand-green">
-                    ฿{premium.annual.toLocaleString()}
-                  </div>
-                  <div className="text-brand-gold font-medium">ต่อปี</div>
-                </div>
-                
-                <div className="text-center p-4 bg-white rounded-lg shadow-md border border-brand-green/10">
-                  <div className="text-2xl font-bold text-brand-green">
-                    ฿{premium.semiAnnual.toLocaleString()}
-                  </div>
-                  <div className="text-brand-gold font-medium">ต่อครึ่งปี</div>
-                </div>
-                
-                <div className="text-center p-4 bg-white rounded-lg shadow-md border border-brand-green/10">
-                  <div className="text-2xl font-bold text-brand-green">
-                    ฿{premium.quarterly.toLocaleString()}
-                  </div>
-                  <div className="text-brand-gold font-medium">ต่อไตรมาส</div>
-                </div>
-                
-                <div className="text-center p-4 bg-white rounded-lg shadow-md border border-brand-green/10">
-                  <div className="text-2xl font-bold text-brand-green">
-                    ฿{premium.monthly.toLocaleString()}
-                  </div>
-                  <div className="text-brand-gold font-medium">ต่อเดือน</div>
-                </div>
+              <div className="text-sm text-brand-green/70 mb-2 font-medium">เบี้ยประกันรายปี</div>
+              <div className="text-4xl font-bold text-brand-green mb-2">
+                ฿{grandTotal.toLocaleString()}
               </div>
-
-              <div className="text-center p-4 bg-gradient-to-r from-brand-gold to-brand-gold/80 rounded-lg text-white">
-                <div className="text-xl font-bold">
-                  เบี้ยประกันรวม: ฿{Math.round(premium.total).toLocaleString()}
-                </div>
-                <div className="text-sm opacity-90 mt-1">
-                  (คำนวณราคาตั้งแต่เริ่มต้นจนกระทั่งถึงอายุตามสัญญา)
-                </div>
-              </div>
+              <div className="text-sm text-brand-green/60">บาทต่อปี</div>
             </div>
 
-            {/* Footer */}
-            <div className="pt-4 border-t border-brand-green/20 text-center text-sm text-gray-600 space-y-2 bg-gray-50 p-4 rounded-lg">
-              <p className="font-medium text-brand-green">
-                ใบเสนอราคานี้มีผลใช้บังคับเป็นเวลา 30 วัน นับจากวันที่ออกใบเสนอราคา
-              </p>
-              <p>
-                สอบถามข้อมูลเพิ่มเติม โทร. 02-xxx-xxxx หรือ info@insurance.co.th
-              </p>
-            </div>
+
           </CardContent>
         </Card>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-3">
-        <Button 
+      {/* ปุ่มดาวน์โหลด / แชร์ */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <Button
           onClick={generatePDF}
-          className="flex-1 brand-green text-white hover:opacity-90 h-12 text-lg font-medium shadow-lg"
+          className="w-full md:w-1/2 from-brand-green to-brand-green-dark hover:from-brand-green-dark hover:to-brand-green text-white h-14 text-lg font-medium shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
           size="lg"
         >
           <Download className="w-5 h-5 mr-2" />
           ดาวน์โหลด PDF
         </Button>
-        
-        <Button 
+        <Button
           onClick={shareQuote}
           variant="outline"
-          className="flex-1 border-brand-gold text-brand-gold hover:bg-brand-gold hover:text-white h-12 text-lg font-medium shadow-lg"
+          className="w-full md:w-1/2 border-2 border-brand-gold text-brand-gold hover:bg-gradient-to-r hover:from-brand-gold hover:to-brand-gold-dark hover:text-white h-14 text-lg font-medium shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
           size="lg"
         >
           <Share2 className="w-5 h-5 mr-2" />
