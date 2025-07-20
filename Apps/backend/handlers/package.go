@@ -128,6 +128,42 @@ func UpdatePricingHandler(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
+type AgeRangeUpdate struct {
+	MinAge int `json:"minAge" bson:"minAge"`
+	MaxAge int `json:"maxAge" bson:"maxAge"`
+}
+
+func UpdateMinMaxHandler(db *mongo.Database) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		packageID := c.Param("id")
+		var payload AgeRangeUpdate
+
+		if err := c.ShouldBindJSON(&payload); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+			return
+		}
+
+		objID, err := primitive.ObjectIDFromHex(packageID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+			return
+		}
+
+		update := bson.M{"$set": bson.M{
+			"minAge": payload.MinAge,
+			"maxAge": payload.MaxAge,
+		}}
+
+		_, err = db.Collection("packages").UpdateByID(context.TODO(), objID, update)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update age range"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Age range updated"})
+	}
+}
+
 // เพิ่มแพ็กเกจใหม่พร้อมการเรียงลำดับราคา
 func CreatePackageHandler(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
