@@ -12,6 +12,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import axios from 'axios';
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
+import { ConflictDialog } from "@/components/ConflictDialog";
+
 interface PackagePrice {
   packageName: string;
   baseMonthly: number;
@@ -92,10 +95,24 @@ const Admin = () => {
    *  Promotion
    * 
    */
-  
+  function getDaysUntilExpiration(validTo: string): number {
+    const today = new Date();
+    const expiredDate = new Date(validTo + "T23:59:59");
 
+    // ล้างเวลาของ today
+    today.setHours(0, 0, 0, 0);
+
+    const msInDay = 1000 * 60 * 60 * 24;
+    return Math.ceil((expiredDate.getTime() - today.getTime()) / msInDay);
+}
+
+  // Upload file
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true); // สถานะการโหลดข้อมูล
   const [error, setError] = useState(null); // ข้อผิดพลาด
+  const [conflicts, setConflicts] = useState([]); // เก็บความต่าง
+  const [showConflictPopup, setShowConflictPopup] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
 
   const [promotionType, setPromotionType] = useState('general');  // default type
   const [promotionName, setPromotionName] = useState('');
@@ -354,13 +371,13 @@ const handlePricingChange = (index: number, field: string, value: string) => {
     return <Navigate to="/" replace />;
   }
 
-  const handleDeletePackage = async (packageName: string) => {
-    console.log('PackageID - ',packageName)
+  const handleDeletePackage = async (packageId : string ,packageName: string) => {
+    console.log('PackageID - ',packageId)
     try {
-      await axios.delete(`${config.Packages}/${packageName}`);
+      await axios.delete(`${config.Packages}/${packageId}`);
 
       // อัปเดต state ทันที (ลบแพ็คเกจออกจาก state)
-      setPackages((prev) => prev.filter((pkg) => pkg.name !== packageName));
+      setPackages((prev) => prev.filter((pkg) => pkg.id !== packageId));
 
     } catch (error) {
       toast({
@@ -376,14 +393,15 @@ const handlePricingChange = (index: number, field: string, value: string) => {
 
   };
 
-  const handleEditPackage = (packageName) => {
+  const handleEditPackage = (packageId : string,packageName : string) => {
+    console.log("packageId - ", packageId)
       toast({
       title: "แก้ไข",
       description: `แก้ไขข้อมูลของ ${packageName} แล้ว`,
     });
 };
 
-const handleDeletePromotion = async (promotionId: string) => {
+const handleDeletePromotion = async (promotionId: string, promotionName : string) => {
   console.log("promotionId -",promotionId)
 
   try {
@@ -393,7 +411,7 @@ const handleDeletePromotion = async (promotionId: string) => {
     console.log("Response from delete:", response);    
     toast({
       title: "ลบโปรโมชั่นสำเร็จ",
-      description: `โปรโมชั่นที่มี ID: ${promotionId} ถูกลบแล้ว`,
+      description: `โปรโมชั่น ${promotionName} ถูกลบแล้ว`,
     });
   } catch (error) {
     console.error("Error deleting promotion", error);
@@ -575,6 +593,37 @@ const handleSavePricing = async (index: number) => {
 };
 
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleUpload = async () => {
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
+    try {
+      const uploadURL = `${config.apiBase}/upload`
+      const response = await axios.post(uploadURL, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      // ถ้ามี field `conflicts` กลับมา
+      if (response.data.conflicts?.length > 0) {
+        setConflicts(response.data.conflicts);
+        setShowConflictPopup(true); // แสดง popup
+      } else {
+        toast({ title: "อัปโหลดสำเร็จ", description: "บันทึกข้อมูลเรียบร้อย", duration: 3000 });
+      }
+    } catch (error) {
+      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถอัปโหลดได้", variant: "destructive" });
+    }
+  };
+
+  
+
   if (loading) {
     return <p>กำลังโหลดข้อมูล...</p>;
   }
@@ -693,14 +742,14 @@ const handleSavePricing = async (index: number) => {
                 <p><strong>ราคาชาย:</strong> ฿{price.male.toLocaleString()}</p>
               </div>
 
-               <Button
-                variant="outline"
-                size="sm"
-                className="mt-2 self-end"
-                onClick={() => handleEditPricing(index)}
-                >
-                  แก้ไข
-                </Button>
+               <div className="flex justify-end mt-2">
+                  <span
+                  onClick={() => handleEditPricing(index)}
+                  className="text-sm text-blue-600 hover:text-white hover:bg-blue-600 px-3 py-1 rounded cursor-pointer transition"
+                  >
+                    แก้ไข
+                  </span>
+              </div>
             </div>
           ))}
         </div>
@@ -747,25 +796,14 @@ const handleSavePricing = async (index: number) => {
   </div>
 )}
 
-    <div className="flex gap-4 mt-6">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => handleEditPackage(selectedPackage)}
-        className="text-blue-600 hover:text-white hover:bg-blue-600 transition"
-      >
-        แก้ไข
-      </Button>
 
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => handleDeletePackage(selectedPackage.id)}
-        className="text-red-600 hover:text-white hover:bg-red-600 transition"
-      >
-        ลบ
-      </Button>
-    </div>
+<div className="flex justify-end mt-6">
+  <ConfirmDeleteDialog
+    packageName={selectedPackage.name}
+    onConfirm={() => handleDeletePackage(selectedPackage.id, selectedPackage.name)}
+    triggerLabel="ลบแพ็คเกจ"
+  />
+</div>
   </div>
 )}
 
@@ -795,26 +833,28 @@ const handleSavePricing = async (index: number) => {
               </p>
             </div>
 
-            <div className="flex space-x-2">
-              {/* ปุ่มลบ */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDeletePackage(pkg.id)} 
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-              {/* ปุ่มแก้ไข */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleEditPackage(pkg.id)}  
-                className="text-blue-600 hover:text-blue-700"
-              >
-                <Edit className="w-4 h-4" />
-              </Button>
-            </div>
+<div className="flex space-x-4">
+  {/* ปุ่มลบพร้อมยืนยัน */}
+  <ConfirmDeleteDialog
+    packageName={pkg.name}
+    onConfirm={() => handleDeletePackage(pkg.id, pkg.name)}
+    triggerLabel={
+      <span className="text-sm text-red-600 hover:text-white hover:bg-red-600 px-2 py-1 rounded cursor-pointer transition flex items-center space-x-1">
+        <Trash2 className="w-4 h-4" />
+        <span>ลบ</span>
+      </span>
+    }
+  />
+
+  {/* ปุ่มแก้ไขแบบข้อความ */}
+  <span
+    onClick={() => handleEditPackage(pkg.id, pkg.name)}
+    className="text-sm text-blue-600 hover:text-white hover:bg-blue-600 px-2 py-1 rounded cursor-pointer transition flex items-center space-x-1"
+  >
+    <Edit className="w-4 h-4" />
+    <span>แก้ไข</span>
+  </span>
+</div>
           </div>
           )
         )
@@ -855,14 +895,44 @@ const handleSavePricing = async (index: number) => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="categoryId">หมวดหมู่</Label>
-              <Input
-                id="categoryId"
-                value={newPackage.categoryId}
-                onChange={(e) => setNewPackage({ ...newPackage, categoryId: e.target.value })}
-                placeholder="กรอกหมวดหมู่"
-              />
-            </div>
+  {/* แถวหมวดหมู่ + ปุ่ม */}
+  <div className="flex justify-between items-center">
+    <Label htmlFor="categoryId">หมวดหมู่</Label>
+
+    <div className="flex gap-2">
+      <button
+        type="button"
+        onClick={() => setNewPackage({ ...newPackage, categoryId: "สัญญาเพิ่มเติม" })}
+        className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
+      >
+        สัญญาเพิ่มเติม
+      </button>
+      <button
+        type="button"
+        onClick={() => setNewPackage({ ...newPackage, categoryId: "โรคร้ายแรง" })}
+        className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
+      >
+        โรคร้ายแรง
+      </button>
+      <button
+        type="button"
+        onClick={() => setNewPackage({ ...newPackage, categoryId: "อุบัติเหตุ" })}
+        className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
+      >
+        อุบัติเหตุ
+      </button>
+    </div>
+  </div>
+
+  {/* ช่องกรอกหมวดหมู่ */}
+  <Input
+    id="categoryId"
+    value={newPackage.categoryId}
+    onChange={(e) => setNewPackage({ ...newPackage, categoryId: e.target.value })}
+    placeholder="กรอกหมวดหมู่"
+  />
+</div>
+
             <div className="space-y-2">
               <Label htmlFor="minAge">อายุขั้นต่ำ</Label>
               <Input
@@ -883,6 +953,41 @@ const handleSavePricing = async (index: number) => {
                 placeholder="กรอกอายุสูงสุด"
               />
             </div>
+<div className="flex justify-end mt-4">
+  <div className="space-y-2">
+    <div className="flex items-center gap-4">
+      <label
+        htmlFor="fileUpload"
+        className="cursor-pointer bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded shadow-sm hover:bg-gray-100 transition"
+      >
+        เลือกไฟล์
+      </label>
+      <input
+        id="fileUpload"
+        type="file"
+        accept=".csv,.json,.xlsx"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+<>
+  <button
+    onClick={handleUpload}
+    className="px-6 py-2 rounded shadow text-white transition"
+    style={{ backgroundColor: "#496650" }}
+  >
+    อัปโหลด
+  </button>
+
+</>
+    </div>
+
+    {selectedFile && (
+      <div className="text-sm text-gray-600 text-right">
+        ไฟล์ที่เลือก: <span className="font-medium">{selectedFile.name}</span>
+      </div>
+    )}
+  </div>
+</div>
 
             {/* ฟอร์มกรอกข้อมูลราคา */}
             <div className="space-y-2">
@@ -927,7 +1032,7 @@ const handleSavePricing = async (index: number) => {
               <Plus className="w-4 h-4 mr-2" />
               เพิ่มแพ็คเกจใหม่
             </Button>
-          </div>
+            </div>
         </CardContent>
       </Card>
     </TabsContent>
@@ -1067,7 +1172,24 @@ const handleSavePricing = async (index: number) => {
           className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
         >
           <div>
-            <h4 className="font-medium">{promotion.Name}</h4>
+            <p className="text-sm font-medium text-gray-800">
+              {promotion.Name}{" "}
+              {promotion.ValidTo && (() => {
+                const daysLeft = getDaysUntilExpiration(promotion.ValidTo);
+                const isExpired = daysLeft < 0;
+                const text = daysLeft > 0
+                  ? `(เหลืออีก ${daysLeft} วัน)`
+                  : daysLeft === 0
+                    ? `(วันนี้วันสุดท้าย)`
+                    : `(หมดอายุแล้ว)`;
+              
+                return (
+                  <span className={`ml-2 font-normal ${isExpired ? 'text-red-600' : 'text-green-600'}`}>
+                    {text}
+                  </span>
+                );
+              })()}
+            </p>
             <p className="text-sm text-gray-600">คำอธิบาย: {promotion.Description}</p>
             <p className="text-sm text-gray-600">ส่วนลด: {promotion.DiscountPercentage}%</p>
             <p className="text-sm text-gray-600">
@@ -1078,24 +1200,27 @@ const handleSavePricing = async (index: number) => {
             </p>
           </div>
 
-          <div className="flex space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDeletePromotion(promotion.ID)}
-              className="text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleEditPromotion(promotion.ID)}
-              className="text-blue-600 hover:text-blue-700"
-            >
-              <Edit className="w-4 h-4" />
-            </Button>
-          </div>
+<div className="flex space-x-2">
+  <ConfirmDeleteDialog
+    packageName={promotion.Name}
+    onConfirm={() => handleDeletePromotion(promotion.ID, promotion.Name)}
+    triggerLabel={
+      <span className="flex items-center gap-1 text-sm text-red-600 hover:text-white hover:bg-red-600 px-2 py-1 rounded cursor-pointer transition">
+        <Trash2 className="w-4 h-4" />
+        ลบ
+      </span>
+    }
+  />
+
+  <span
+    onClick={() => handleEditPromotion(promotion.ID)}
+    className="flex items-center gap-1 text-sm text-blue-600 hover:text-white hover:bg-blue-600 px-2 py-1 rounded cursor-pointer transition"
+  >
+    <Edit className="w-4 h-4" />
+    แก้ไข
+  </span>
+</div>
+
         </div>
       ))
     )}
