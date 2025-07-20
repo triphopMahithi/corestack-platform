@@ -10,11 +10,25 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<boolean>;
+<<<<<<< HEAD
   loginWithUserData: (rawData: any) => void; // เพิ่ม
+=======
+  loginWithUserData: (rawData: any) => void;
+>>>>>>> main
   logout: () => void;
 }
+<<<<<<< HEAD
 
 const AuthContext = createContext<AuthContextType>(null as any);
+=======
+const AuthContext = createContext<AuthContextType>(null as any);
+//const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// const ADMIN_CREDENTIALS = {
+//   username: 'aabbcc',
+//   password: '11233'
+// };
+>>>>>>> main
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -27,6 +41,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+<<<<<<< HEAD
+=======
+//const login = async (
+//  username: string,
+//  password: string,
+//  role: 'admin' | 'user' = 'user'
+//): Promise<boolean> => {
+//  const user: User = { username, role };
+//  setUser({ username, role });
+//  localStorage.setItem('currentUser', JSON.stringify(user));
+//  return true;
+//};
+>>>>>>> main
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
       const res = await fetch('http://localhost:8080/api/login', {
@@ -67,19 +94,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    setUser(null);
+    setUser(null);  
     localStorage.removeItem('currentUser');
   };
 
   return (
+<<<<<<< HEAD
     <AuthContext.Provider value={{ user, login, loginWithUserData, logout }}>
       {children}
+=======
+    <AuthContext.Provider value={{ user, login, loginWithUserData, logout, isAdmin }}>  
+    {children}
+>>>>>>> main
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
+<<<<<<< HEAD
   if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
+=======
+  if (!context) throw new Error('useAuth must be used within AuthProvider');  
+  
+  return context;
+
+};
+>>>>>>> main

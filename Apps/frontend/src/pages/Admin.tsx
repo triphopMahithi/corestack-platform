@@ -6,28 +6,302 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Save, Plus, Trash2 } from 'lucide-react';
+import { Settings, Save, Plus, Trash2 , Edit} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import axios from 'axios';
-
 interface PackagePrice {
   packageName: string;
   baseMonthly: number;
   baseAnnual: number;
 }
 
+interface Pricing {
+  ageFrom: number;
+  ageTo: number;
+  female: number | string;
+  male: number | string;
+}
+
+interface NewPackage {
+  id: string;
+  name: string;
+  categoryId: string;
+  baseMonthly: number;
+  baseAnnual: number;
+  special: boolean;
+  genderRestriction: string;
+  minAge: number | string;
+  maxAge: number | string;
+  pricing: Pricing[];
+}
+
 const Admin = () => {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
+  const [packageList, setPackageList] = useState([]); // State to store all packages
+  
+  const [query, setQuery] = useState('');
+  const [packages, setPackages] = useState([]);
+  const [selectedPackage, setSelectedPackage] = useState('');
+  const [noResults, setNoResults] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showMoreInfo, setShowMoreInfo] = useState(false); // สำหรับการแสดงข้อมูลเพิ่มเติม
+  // promotion state
+  const [promotionType, setPromotionType] = useState('general');  // default type
+  const [promotionName, setPromotionName] = useState('');
+  const [promotionDescription, setPromotionDescription] = useState('');
+  const [discountPercentage, setDiscountPercentage] = useState('');
+  const [validFrom, setValidFrom] = useState('');
+  const [validTo, setValidTo] = useState('');
+  const [packageId, setPackageId] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  /** 
+   *  
+   * Search 
+   * 
+   */
+
+  // ฟังก์ชันค้นหาแพ็กเกจ
+  const handleSearch = async (e) => {
+    const searchQuery = e.target.value;
+    setQuery(searchQuery);
+
+    if (searchQuery.length >= 1) {
+      try {
+        // ส่งคำค้นหาไปที่ backend
+        const response = await axios.get(
+          `http://localhost:8080/api/search?query=${searchQuery}`
+        );
+        if (response.data.length === 0) {
+          setNoResults(true);
+        } else {
+          setPackages(response.data);
+          setNoResults(false);
+        }
+      } catch (error) {
+        console.error("Error fetching packages", error);
+      }
+    } else {
+      setPackages([]);
+    }
+  };
+  const handlePackageSelect = (pkg) => {
+    setSelectedPackage(pkg);
+    setIsDropdownOpen(false); // ปิด dropdown เมื่อเลือกแล้ว
+  };
+
+  // คำนวณอายุที่น้อยที่สุดและมากที่สุดจาก pricing
+  const getMinAge = (pricing) => {
+    if (!pricing || pricing.length === 0) return null;
+    return Math.min(...pricing.map(p => p.ageFrom));
+  };
+
+  const getMaxAge = (pricing) => {
+    if (!pricing || pricing.length === 0) return null;
+    return Math.max(...pricing.map(p => p.ageTo));
+  };
+
+  // คำนวณราคาเพศชาย (Male) และเพศหญิง (Female) ตามช่วงอายุ
+  const getPriceByGender = (pricing, gender) => {
+    if (!pricing || pricing.length === 0) return null;
+    const price = pricing.find(p => p.gender === gender);
+    return price ? price[gender] : 0;
+  };
+
+/**
+ * 
+ *    Page Function
+ */
+
+  // ฟังก์ชันเกี่ยวกับ ขึ้นหน้าใหม่
+  const ItemsPerPage = 5; // จำนวนรายการที่จะแสดงในแต่ละหน้า
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // ฟังก์ชันคำนวณข้อมูลที่จะแสดงในแต่ละหน้า
+  const startIndex = (currentPage - 1) * ItemsPerPage;
+  const currentPackages = packageList.slice(startIndex, startIndex + ItemsPerPage);
+
+  // ฟังก์ชันไปหน้าถัดไป
+  const nextPage = () => {
+    if (currentPage < Math.ceil(packageList.length / ItemsPerPage)) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  // ฟังก์ชันไปหน้าก่อนหน้า
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };  
+  
+/**
+ * 
+ *  Package
+ * 
+ */
+
+
+  // Fetch package list from database when the component is mounted
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const response = await axios.get('http://localhost:8080/api/packages');
+        setPackageList(response.data); // Store the received data in state
+        console.log('Package - ', response.data)
+        // updated ui
+      } catch (error) {
+        toast({
+          title: 'Error fetching packages',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    };
+
+    fetchPackages();
+  }, []); // Empty dependency array ensures this runs only once when the component mounts
+
+  const [newPackage, setNewPackage] = useState<NewPackage>({
+    id: '',
+    name: '',
+    categoryId: '',
+    baseMonthly: 0,
+    baseAnnual: 0,
+    special: false,
+    genderRestriction: '',
+    minAge: '',
+    maxAge: '',
+    pricing: [],
+  });
+
+  const [pricingInputs, setPricingInputs] = useState<{ ageFrom: number, ageTo: number, female: number, male: number }[]>([]);
+
+// ฟังก์ชันเพิ่มช่องกรอกข้อมูลราคาใหม่
+const addPricingInput = () => {
+  if (newPackage.minAge && newPackage.maxAge) {
+    // เพิ่มข้อมูลราคาโดยใช้ minAge และ maxAge ที่กรอก
+    setPricingInputs([
+      ...pricingInputs,
+      {
+        ageFrom: parseInt(newPackage.minAge as string), // ใช้ minAge ที่กรอก
+        ageTo: parseInt(newPackage.maxAge as string), // ใช้ maxAge ที่กรอก
+        female: 0,
+        male: 0,
+      }
+    ]);
+
+    // รีเซ็ตอายุขั้นต่ำและสูงสุดหลังจากเพิ่มราคา
+    setNewPackage({ ...newPackage, minAge: '', maxAge: '' }); // รีเซ็ตค่า minAge และ maxAge
+  } else {
+    toast({
+      title: 'ข้อมูลไม่ครบถ้วน',
+      description: 'กรุณากรอกอายุขั้นต่ำและสูงสุดให้ครบถ้วน',
+      variant: 'destructive',
+    });
+  }
+};
+
+  // ฟังก์ชันลบราคา
+  const removePricingInput = (index: number) => {
+    const updatedPricingInputs = [...pricingInputs];
+    updatedPricingInputs.splice(index, 1);
+    setPricingInputs(updatedPricingInputs);
+  };
+
+const handleSavePackage = () => {
+  if (!newPackage.name || !newPackage.categoryId || pricingInputs.length === 0) {
+    toast({
+      title: 'ข้อมูลไม่ครบถ้วน',
+      description: 'กรุณากรอกข้อมูลให้ครบถ้วน',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  // ตรวจสอบว่า minAge และ maxAge ไม่มีค่า หรือเป็น ''
+  let minAge = newPackage.minAge;
+  let maxAge = newPackage.maxAge;
+
+  if (minAge === '' || maxAge === '') {
+    // คำนวณค่า minAge และ maxAge จาก pricingInputs
+    if (pricingInputs.length > 0) {
+      minAge = Math.min(...pricingInputs.map(p => p.ageFrom)); // หาค่าน้อยที่สุดจาก ageFrom
+      maxAge = Math.max(...pricingInputs.map(p => p.ageTo)); // หาค่ามากที่สุดจาก ageTo
+    } else {
+      toast({
+        title: 'กรุณากรอกข้อมูลราคาให้ครบถ้วน',
+        description: 'กรุณากรอกข้อมูลอายุขั้นต่ำและสูงสุดก่อนที่จะบันทึกแพ็คเกจ',
+        variant: 'destructive',
+      });
+      return;
+    }
+  }
+
+  // รวมข้อมูลที่กรอกลงใน pricing
+  const newPricingData = pricingInputs.map(input => ({
+    ageFrom: input.ageFrom,
+    ageTo: input.ageTo,
+    female: input.female,
+    male: input.male,
+  }));
+
+  const packageToSave = { 
+    ...newPackage, 
+    minAge: parseInt(minAge as string), // แปลงเป็นตัวเลข
+    maxAge: parseInt(maxAge as string), // แปลงเป็นตัวเลข
+    pricing: newPricingData 
+  };
+    // ส่งข้อมูลใหม่ไปที่ backend (สมมุติว่าเป็น POST request)
+    axios.post('http://localhost:8080/api/packages', packageToSave)
+    .then((response) => {
+    // เมื่อการส่งข้อมูลสำเร็จ
+    toast({
+      title: 'บันทึกสำเร็จ',
+      description: `เพิ่มแพ็คเกจ ${newPackage.name} แล้ว`,
+    });
+    // เพิ่มแพ็คเกจที่เพิ่มใหม่ลงใน packageList โดยตรง
+    setPackageList([...packageList, packageToSave]); // อัปเดต packageList ทันที
+
+    // รีเซ็ตข้อมูลหลังจากบันทึก
+    setNewPackage({
+      id: '',
+      name: '',
+      categoryId: '',
+      baseMonthly: 0,
+      baseAnnual: 0,
+      special: false,
+      genderRestriction: '',
+      minAge: '',
+      maxAge: '',
+      pricing: [],
+    });
+    setPricingInputs([]);
+  })
+  .catch((error) => {
+    // จัดการข้อผิดพลาด
+    toast({
+      title: 'เกิดข้อผิดพลาด',
+      description: error.response?.data?.message || 'ไม่สามารถเพิ่มแพ็คเกจได้',
+      variant: 'destructive',
+    });
+  });
+}
+
+ // ฟังก์ชันจัดการการเปลี่ยนแปลงราคา
+const handlePricingChange = (index: number, field: string, value: string) => {
+    const updatedPricingInputs = [...pricingInputs];
+    // แปลงค่าเป็นตัวเลขเมื่อกรอกข้อมูล
+    updatedPricingInputs[index] = { ...updatedPricingInputs[index], [field]: value === '' ? '' : parseFloat(value) };
+    setPricingInputs(updatedPricingInputs);
+  };
 
   // Redirect if not admin
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
-
-  const [selectedPackage, setSelectedPackage] = useState('');
   const [monthlyPrice, setMonthlyPrice] = useState('');
   const [annualPrice, setAnnualPrice] = useState('');
   
@@ -111,26 +385,186 @@ const Admin = () => {
     setAnnualPrice('');
   };
 
-  const handlePackageSelect = (packageName: string) => {
-    setSelectedPackage(packageName);
-    const existing = packagePrices.find(p => p.packageName === packageName);
-    if (existing) {
-      setMonthlyPrice(existing.baseMonthly.toString());
-      setAnnualPrice(existing.baseAnnual.toString());
-    } else {
-      setMonthlyPrice('');
-      setAnnualPrice('');
-    }
-  };
+  //const handlePackageSelect = (packageName: string) => {
+  //  setSelectedPackage(packageName);
+  //  const existing = packagePrices.find(p => p.packageName === packageName);
+  //  if (existing) {
+  //    setMonthlyPrice(existing.baseMonthly.toString());
+  //    setAnnualPrice(existing.baseAnnual.toString());
+  //  } else {
+  //    setMonthlyPrice('');
+  //    setAnnualPrice('');
+  //  }
+  //};
 
-  const handleDeletePrice = (packageName: string) => {
-    setPackagePrices(packagePrices.filter(p => p.packageName !== packageName));
+  const handleDeletePackage = async (packageName: string) => {
+    console.log('PackageID - ',packageName)
+    //setPackagePrices(packagePrices.filter(p => p.packageName !== packageName));
+    try {
+      const response = await axios.delete(`http://localhost:8080/api/packages/${packageName}`);
+    } catch (error) {
+      toast({
+      title: "เกิดข้อผิดพลาด",
+      description: "ไม่สามารถลบแพ็คเกจได้",
+      variant: "destructive",
+    });
+    }
     toast({
       title: "ลบสำเร็จ",
       description: `ลบราคาสำหรับ ${packageName} แล้ว`,
     });
+
   };
 
+  const handleEditPackage = (packageName) => {
+    // ทำงานบางอย่างที่เกี่ยวกับการแก้ไขแพ็คเกจ
+    // เช่น การแสดงฟอร์มแก้ไขข้อมูลแพ็คเกจ
+    setPackagePrices(packagePrices.filter(p => p.packageName !== packageName));
+      toast({
+      title: "แก้ไข",
+      description: `แก้ไขข้อมูลของ ${packageName} แล้ว`,
+    });
+};
+
+  
+  /**
+   *  Promotion
+   * 
+   */
+  
+
+  const [promotionListState, setPromotionListState] = useState([]); // ข้อมูลโปรโมชั่น
+  const [loading, setLoading] = useState(true); // สถานะการโหลดข้อมูล
+  const [error, setError] = useState(null); // ข้อผิดพลาด
+  const currentPromotions = promotionListState.slice(
+    (currentPage - 1) * ItemsPerPage,
+    currentPage * ItemsPerPage
+  );
+  
+
+  // ดึงข้อมูลโปรโมชั่นจาก API เมื่อ component ถูก mount
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      try {
+        const response = await axios.get('http://localhost:8080/api/promotions');
+        setPromotionListState(response.data); // เก็บข้อมูลที่ได้ใน state
+        console.log("log - interface promotions :",response.data);
+      } catch (error) {
+        setError("ไม่สามารถดึงข้อมูลโปรโมชั่นได้");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPromotions();
+  }, []); // Empty dependency array หมายความว่า useEffect จะทำงานเพียงครั้งเดียวเมื่อ component ถูก mount
+
+
+  const handleDeletePromotion = async (promotionId: string) => {
+    console.log("promotionId -",promotionId)
+
+  try {
+    // ส่งคำขอ DELETE ไปยัง backend
+    const response = await axios.delete(`http://localhost:8080/api/promotions/${promotionId}`);
+    console.log("Response from delete:", response);    
+    toast({
+      title: "ลบโปรโมชั่นสำเร็จ",
+      description: `โปรโมชั่นที่มี ID: ${promotionId} ถูกลบแล้ว`,
+    });
+  } catch (error) {
+    console.error("Error deleting promotion", error);
+    toast({
+      title: "เกิดข้อผิดพลาด",
+      description: "ไม่สามารถลบโปรโมชั่นได้",
+      variant: "destructive",
+    });
+  }
+};
+
+const handleEditPromotion = (promotionId: string) => {
+  console.log("Editing promotion with ID:", promotionId);
+  // เพิ่มการจัดการการแก้ไขข้อมูลที่นี่ เช่น การแสดงฟอร์มแก้ไข
+};
+
+const handleAddPromotion = async () => {
+  // ตรวจสอบข้อมูลที่กรอก
+  if (!promotionName || !promotionDescription) {
+    toast({
+      title: 'ข้อมูลไม่ครบถ้วน',
+      description: 'กรุณากรอกชื่อโปรโมชั่นและรายละเอียด',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  // ตรวจสอบสำหรับ "โปรโมชั่นเฉพาะแพ็คเกจ"
+  if (promotionType === 'package' && !packageId) {
+    toast({
+      title: 'ข้อมูลไม่ครบถ้วน',
+      description: 'กรุณากรอกชื่อแพ็คเกจที่โปรโมชั่นใช้ได้',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  // ตรวจสอบสำหรับ "โปรโมชั่นเฉพาะ categoryId"
+  if (promotionType === 'category' && !categoryId) {
+    toast({
+      title: 'ข้อมูลไม่ครบถ้วน',
+      description: 'กรุณากรอก categoryId ที่โปรโมชั่นใช้ได้',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  // สร้างข้อมูลโปรโมชั่น
+  const promotionData = {
+    name: promotionName,
+    description: promotionDescription,
+    type: promotionType,
+    discountPercentage: parseFloat(discountPercentage),
+    validFrom,
+    validTo,
+    packageId: promotionType === 'package' ? packageId : null,
+    categoryId: promotionType === 'category' ? categoryId : null,
+  };
+
+  try {
+    // ส่งข้อมูลโปรโมชั่นไปยัง backend
+    //await axios.post('http://localhost:8080/api/promotions', promotionData);
+    const response = await axios.post('http://localhost:8080/api/promotions', promotionData);
+    // รับข้อมูลโปรโมชั่นที่ถูกสร้างพร้อม _id
+    const createdPromotion = response.data.promotion;
+
+    // อัปเดตรายการโปรโมชั่นใน state
+    setPromotionListState((prev) => [...prev, createdPromotion]);
+    
+    toast({
+      title: 'โปรโมชั่นถูกเพิ่มแล้ว',
+      description: `เพิ่มโปรโมชั่น ${promotionName} สำเร็จ`,
+    });
+
+    // รีเซ็ตฟอร์มหลังจากเพิ่ม
+    setPromotionName('');
+    setPromotionDescription('');
+    setPackageId('');
+    setCategoryId('');
+  } catch (error) {
+    toast({
+      title: 'เกิดข้อผิดพลาด',
+      description: error.response?.data?.message || 'ไม่สามารถเพิ่มโปรโมชั่นได้',
+      variant: 'destructive',
+    });
+  }
+}
+
+  if (loading) {
+    return <p>กำลังโหลดข้อมูล...</p>;
+  }
+
+  if (error) {
+    return <p>{error}</p>;
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-brand-green/5">
       <Header />
@@ -138,10 +572,10 @@ const Admin = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-brand-green mb-2">
-              ระบบจัดการแพ็กเกจประกัน
+              ระบบจัดการแพ็คเกจประกัน
             </h1>
             <p className="text-gray-600">
-              จัดการราคา แพ็กเกจ และแผนประกันภัย
+              จัดการราคา แพ็คเกจ และแผนประกันภัย
             </p>
           </div>
 
@@ -149,8 +583,8 @@ const Admin = () => {
             <Tabs defaultValue="pricing" className="space-y-6">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="pricing">จัดการราคา</TabsTrigger>
-                <TabsTrigger value="packages">จัดการแพ็กเกจ</TabsTrigger>
-                <TabsTrigger value="settings">ตั้งค่า</TabsTrigger>
+                <TabsTrigger value="packages">จัดการแพ็คเกจ</TabsTrigger>
+                <TabsTrigger value="settings">โปรโมชั่น</TabsTrigger>
               </TabsList>
 
               <TabsContent value="pricing" className="space-y-6">
@@ -158,52 +592,124 @@ const Admin = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Settings className="w-5 h-5" />
-                      แก้ไขราคาแพ็กเกจ
+                      แก้ไขราคาแพ็คเกจ
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label>เลือกแพ็กเกจ</Label>
-                        <Select value={selectedPackage} onValueChange={handlePackageSelect}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="เลือกแพ็กเกจ" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {allPackages.map((pkg) => (
-                              <SelectItem key={pkg} value={pkg}>{pkg}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+        <div className="space-y-4">
+ <div>
+      {/* ช่องค้นหาสำหรับการพิมพ์ */}
+      <input
+        type="text"
+        value={query}
+        onChange={handleSearch}
+        placeholder="ค้นหาแพ็กเกจ..."
+        onFocus={() => setIsDropdownOpen(true)} // เปิด dropdown เมื่อคลิกช่องค้นหา
+      />
 
-                      <div className="space-y-2">
-                        <Label htmlFor="monthlyPrice">ราคาต่อเดือน (฿)</Label>
-                        <Input
-                          id="monthlyPrice"
-                          type="number"
-                          value={monthlyPrice}
-                          onChange={(e) => setMonthlyPrice(e.target.value)}
-                          placeholder="0"
-                        />
-                      </div>
+      {/* แสดงผลลัพธ์การค้นหาผ่าน div dropdown */}
+      <div className="relative">
+        {isDropdownOpen && (
+          <div className="absolute z-10 w-full bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
+            {noResults ? (
+              <div className="p-2 text-center text-gray-500">ไม่พบข้อมูล</div>
+            ) : (
+              packages.map((pkg) => (
+                <div
+                  key={pkg.id}
+                  className="p-2 cursor-pointer hover:bg-gray-200"
+                  onClick={() => handlePackageSelect(pkg)} // เมื่อเลือกแพ็กเกจ
+                >
+                  {pkg.name}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="annualPrice">ราคาต่อปี (฿)</Label>
-                        <Input
-                          id="annualPrice"
-                          type="number"
-                          value={annualPrice}
-                          onChange={(e) => setAnnualPrice(e.target.value)}
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
+      {/* แสดงข้อมูลของแพ็กเกจที่เลือก */}
+      {selectedPackage && (
+        <div className="mt-4">
+          <h3 className="text-xl font-semibold">ข้อมูลแพ็กเกจ</h3>
+          <p><strong>ชื่อแพ็กเกจ:</strong> {selectedPackage.name}</p>
 
-                    <Button onClick={handleSavePrice} className="brand-green">
-                      <Save className="w-4 h-4 mr-2" />
-                      บันทึกราคา
-                    </Button>
+          {/* แสดง AgeFrom และ AgeTo ที่น้อยที่สุดและมากที่สุดจาก pricing */}
+          <div>
+            {selectedPackage.pricing && selectedPackage.pricing.length > 0 ? (
+              <p>
+                อายุที่น้อยที่สุด: {getMinAge(selectedPackage.pricing)} <br />
+                อายุที่มากที่สุด: {getMaxAge(selectedPackage.pricing)}
+              </p>
+            ) : (
+              <p>ไม่มีข้อมูลช่วงอายุ</p>
+            )}
+          </div>
+          {/* ปุ่มแสดงข้อมูลเพิ่มเติม */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowMoreInfo(!showMoreInfo)} // Toggle การแสดงข้อมูลเพิ่มเติม
+            className="mt-4"
+          >
+            {showMoreInfo ? "ซ่อนข้อมูลเพิ่มเติม" : "แสดงข้อมูลเพิ่มเติม"}
+          </Button>
+
+          {/* แสดงข้อมูลเพิ่มเติมเมื่อคลิก */}
+{showMoreInfo && (
+  <div className="mt-4">
+    <p><strong>หมวดหมู่:</strong> {selectedPackage.categoryId}</p>
+    <p><strong>ข้อจำกัดเพศ:</strong> {selectedPackage.genderRestriction}</p>
+
+    {/* แสดงช่วงอายุทั้งหมด */}
+    <p><strong>ช่วงอายุ:</strong></p>
+    <div className="grid grid-cols-2 gap-4">
+      
+      {selectedPackage.pricing.map((price, index) => (
+        <div key={index} className="flex justify-between">
+          <div className="w-1/2">
+            <strong>{price.ageFrom} - {price.ageTo} ปี</strong>
+          </div>
+          <div className="w-1/2 text-right">
+            {/* แสดงราคาของเพศหญิงและเพศชาย */}
+            <div>
+              <strong>ราคาหญิง:</strong> ฿{price.female.toLocaleString()}
+            </div>
+            <div>
+              <strong>ราคาชาย:</strong> ฿{price.male.toLocaleString()}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+          <div className="flex space-x-2 mt-4">
+            {/* ปุ่มแก้ไข */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleEditPackage(selectedPackage.id)}
+              className="text-blue-600 hover:text-blue-700"
+            >
+              แก้ไข
+            </Button>
+
+            {/* ปุ่มลบ */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDeletePackage(selectedPackage.id)}
+              className="text-red-600 hover:text-red-700"
+            >
+              ลบ
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+        </div>
                   </CardContent>
                 </Card>
 
@@ -211,47 +717,160 @@ const Admin = () => {
                   <CardHeader>
                     <CardTitle>รายการราคาปัจจุบัน</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {packagePrices.map((price) => (
-                        <div key={price.packageName} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div>
-                            <h4 className="font-medium">{price.packageName}</h4>
-                            <p className="text-sm text-gray-600">
-                              เดือนละ ฿{price.baseMonthly.toLocaleString()} | ปีละ ฿{price.baseAnnual.toLocaleString()}
-                            </p>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeletePrice(price.packageName)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
+<CardContent>
+      <div className="space-y-2">
+        {currentPackages.map((pkg) => (
+          <div key={pkg.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div>
+              <h4 className="font-medium">{pkg.name}</h4> {/* ใช้ pkg.name สำหรับแสดงชื่อแพ็คเกจ */}
+              <p className="text-sm text-gray-600">
+                ช่วงอายุ: {pkg.minAge ? pkg.minAge : 'ไม่ระบุ'} - {pkg.maxAge ? pkg.maxAge : 'ไม่ระบุ'}
+              </p>
+            </div>
+
+            <div className="flex space-x-2">
+              {/* ปุ่มลบ */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDeletePackage(pkg.id)} 
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+              {/* ปุ่มแก้ไข */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleEditPackage(pkg.id)}  
+                className="text-blue-600 hover:text-blue-700"
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* แสดงปุ่มเปลี่ยนหน้า */}
+      <div className="flex justify-between mt-4">
+        <Button onClick={prevPage} disabled={currentPage === 1}>
+          ก่อนหน้า
+        </Button>
+        <Button onClick={nextPage} disabled={currentPage >= Math.ceil(packageList.length / ItemsPerPage)}>
+          ถัดไป
+        </Button>
+      </div>
+    </CardContent>
                 </Card>
               </TabsContent>
 
-              <TabsContent value="packages">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>จัดการแพ็กเกจ</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-600 mb-4">
-                      ฟีเจอร์การจัดการแพ็กเกจจะพัฒนาในเวอร์ชันต่อไป
-                    </p>
-                    <Button disabled>
-                      <Plus className="w-4 h-4 mr-2" />
-                      เพิ่มแพ็กเกจใหม่
-                    </Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+              {/** จัดการแพ็คเกจ */}
+          <TabsContent value="packages">
+      <Card>
+        <CardHeader>
+          <CardTitle>จัดการแพ็คเกจ</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* ฟอร์มสำหรับกรอกข้อมูลแพ็คเกจ */}
+            {/** 
+            <div className="space-y-2">
+              <Label htmlFor="packageId">ID แพ็คเกจ</Label>
+              <Input
+                id="packageId"
+                value={newPackage.id}
+                onChange={(e) => setNewPackage({ ...newPackage, id: e.target.value })}
+                placeholder="กรอก ID แพ็คเกจ"
+              />
+            </div>
+            */}
+            <div className="space-y-2">
+              <Label htmlFor="packageName">ชื่อแพ็คเกจ</Label>
+              <Input
+                id="packageName"
+                value={newPackage.name}
+                onChange={(e) => setNewPackage({ ...newPackage, name: e.target.value })}
+                placeholder="กรอกชื่อแพ็คเกจ"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="categoryId">หมวดหมู่</Label>
+              <Input
+                id="categoryId"
+                value={newPackage.categoryId}
+                onChange={(e) => setNewPackage({ ...newPackage, categoryId: e.target.value })}
+                placeholder="กรอกหมวดหมู่"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="minAge">อายุขั้นต่ำ</Label>
+              <Input
+                id="minAge"
+                type="number"
+                value={newPackage.minAge}
+                onChange={(e) => setNewPackage({ ...newPackage, minAge: parseInt(e.target.value) })}
+                placeholder="กรอกอายุขั้นต่ำ"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="maxAge">อายุสูงสุด</Label>
+              <Input
+                id="maxAge"
+                type="number"
+                value={newPackage.maxAge}
+                onChange={(e) => setNewPackage({ ...newPackage, maxAge: parseInt(e.target.value) })}
+                placeholder="กรอกอายุสูงสุด"
+              />
+            </div>
+
+            {/* ฟอร์มกรอกข้อมูลราคา */}
+            <div className="space-y-2">
+              <Button onClick={addPricingInput} className="brand-green" disabled={!(newPackage.minAge && newPackage.maxAge)}>
+                เพิ่มราคา
+              </Button>
+            </div>
+
+            {/* แสดงราคาที่เพิ่ม */}
+            <div>
+              {pricingInputs.map((input, index) => (
+                <div key={index} className="space-y-2 mb-4 p-4 border border-gray-300 rounded">
+                  <div>
+                    <Label>อายุ {input.ageFrom} ถึง {input.ageTo}</Label>
+                    <div className="flex gap-4">
+                      <Input
+                        type="number"
+                        value={input.female === 0 ? '' : input.female} // ใช้ค่าว่างถ้าไม่มีข้อมูล
+                        onChange={(e) => handlePricingChange(index, 'female', e.target.value)}
+                        placeholder="กรอกราคาเพศหญิง"
+                      />
+                      <Input
+                        type="number"
+                        value={input.male === 0 ? '' : input.male} // ใช้ค่าว่างถ้าไม่มีข้อมูล
+                        onChange={(e) => handlePricingChange(index, 'male', e.target.value)}
+                        placeholder="กรอกราคาเพศชาย"
+                      />
+                    </div>
+                  </div>
+
+                  {/* ปุ่มลบราคา */}
+                  <Button onClick={() => removePricingInput(index)} className="text-red-600 hover:text-red-700">
+                    <Trash2 className="w-4 h-4" />
+                    ลบราคา
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* ปุ่มบันทึกแพ็คเกจ */}
+            <Button onClick={handleSavePackage} className="brand-green">
+              <Plus className="w-4 h-4 mr-2" />
+              เพิ่มแพ็คเกจใหม่
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </TabsContent>
 
               <TabsContent value="settings">
                 <Card>
@@ -259,22 +878,177 @@ const Admin = () => {
                     <CardTitle>ตั้งค่าระบบ</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-600 mb-4">
-                      ฟีเจอร์การตั้งค่าจะพัฒนาในเวอร์ชันต่อไป
-                    </p>
                     <div className="space-y-4">
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-medium mb-2">สูตรคำนวณปัจจุบัน</h4>
-                        <p className="text-sm text-gray-600">
-                          ราคาเบี้ย = ราคาฐาน × ตัวคูณตามอายุ × ตัวคูณตามเพศ × จำนวนหน่วย
-                        </p>
-                        <ul className="text-xs text-gray-500 mt-2 space-y-1">
-                          <li>• อายุ &gt; 40: ตัวคูณ 1.3, อื่นๆ: ตัวคูณ 1.1</li>
-                          <li>• เพศชาย: ตัวคูณ 1.1, เพศหญิง: ตัวคูณ 1.0</li>
-                        </ul>
-                      </div>
-                    </div>
+      <h4 className="font-medium">เพิ่มโปรโมชั่น</h4>
+      {/* ตัวเลือกประเภทโปรโมชั่น */}
+      <div>
+        <label>ประเภทโปรโมชั่น</label>
+        <div className="space-x-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPromotionType('general')}
+            className={promotionType === 'general' ? 'bg-blue-500 text-white' : ''}
+          >
+            โปรโมชั่นทั่วไป
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPromotionType('package')}
+            className={promotionType === 'package' ? 'bg-blue-500 text-white' : ''}
+          >
+            โปรโมชั่นเฉพาะแพ็คเกจ
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPromotionType('category')}
+            className={promotionType === 'category' ? 'bg-blue-500 text-white' : ''}
+          >
+            โปรโมชั่นเฉพาะสัญญา
+          </Button>
+        </div>
+      </div>
+
+      {/* ฟอร์มกรอกชื่อโปรโมชั่นและรายละเอียด */}
+      <input
+        type="text"
+        placeholder="ชื่อโปรโมชั่น"
+        value={promotionName}
+        onChange={(e) => setPromotionName(e.target.value)}
+        className="input"
+      />
+      <textarea
+        placeholder="รายละเอียดโปรโมชั่น"
+        value={promotionDescription}
+        onChange={(e) => setPromotionDescription(e.target.value)}
+        className="textarea"
+      />
+      <input
+        type="number"
+        placeholder="เปอร์เซ็นต์ส่วนลด"
+        value={discountPercentage}
+        onChange={(e) => setDiscountPercentage(e.target.value)}
+        className="input"
+      />
+      <input
+        type="date"
+        placeholder="วันที่เริ่มต้น"
+        value={validFrom}
+        onChange={(e) => setValidFrom(e.target.value)}
+        className="input"
+      />
+      <input
+        type="date"
+        placeholder="วันที่สิ้นสุด"
+        value={validTo}
+        onChange={(e) => setValidTo(e.target.value)}
+        className="input"
+      />
+
+      {/* เงื่อนไขสำหรับ "โปรโมชั่นเฉพาะแพ็คเกจ" */}
+      {promotionType === 'package' && (
+        <div className="space-y-2">
+          <label>กรุณากรอกชื่อแพ็คเกจที่โปรโมชั่นใช้ได้</label>
+          <input
+            type="text"
+            placeholder="ชื่อแพ็คเกจ"
+            value={packageId}
+            onChange={(e) => setPackageId(e.target.value)}
+            className="input"
+          />
+        </div>
+      )}
+
+      {/* เงื่อนไขสำหรับ "โปรโมชั่นเฉพาะ categoryId" */}
+      {promotionType === 'category' && (
+        <div className="space-y-2">
+          <label>กรุณากรอกสัญญาที่โปรโมชั่นใช้ได้</label>
+          <input
+            type="text"
+            placeholder="ชื่อสัญญา"
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className="input"
+          />
+        </div>
+      )}
+
+      {/* ปุ่มเพิ่มโปรโมชั่น */}
+      <Button onClick={handleAddPromotion} className="btn btn-primary">
+        เพิ่มโปรโมชั่น
+      </Button>
+    </div>
                   </CardContent>
+
+
+
+
+
+    <CardContent>
+      <div className="space-y-2">
+        {currentPromotions.map((promotion) => (
+          <div
+            key={promotion.id}
+            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+          >
+            <div>
+              <h4 className="font-medium">{promotion.Name}</h4>
+                <p className="text-sm text-gray-600">คำอธิบาย : {promotion.Description}</p>
+              <p className="text-sm text-gray-600">
+                ส่วนลด: {promotion.DiscountPercentage}% {/* แสดงส่วนลด */}
+              </p>
+              <p className="text-sm text-gray-600">
+                วันที่เริ่มต้น: {promotion.ValidFrom || 'ไม่ระบุ'}
+              </p>
+              <p className="text-sm text-gray-600">
+                วันที่สิ้นสุด: {promotion.ValidTo || 'ไม่ระบุ'}
+              </p>
+            </div>
+
+            <div className="flex space-x-2">
+              {/* ปุ่มลบ */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDeletePromotion(promotion.ID)}
+                className="text-red-600 hover:text-red-700"
+              >
+                
+                <Trash2 className="w-4 h-4" />
+              </Button>
+              {/* ปุ่มแก้ไข */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleEditPromotion(promotion.ID)}
+                className="text-blue-600 hover:text-blue-700"
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* แสดงปุ่มเปลี่ยนหน้า */}
+      <div className="flex justify-between mt-4">
+        <Button onClick={prevPage} disabled={currentPage === 1}>
+          ก่อนหน้า
+        </Button>
+        <Button
+          onClick={nextPage}
+          disabled={currentPage >= Math.ceil(promotionListState.length / ItemsPerPage)}
+        >
+          ถัดไป
+        </Button>
+      </div>
+    </CardContent>
+
+
+
+
                 </Card>
               </TabsContent>
             </Tabs>

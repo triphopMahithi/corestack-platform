@@ -15,6 +15,7 @@ import (
 )
 
 func main() {
+	// setup
 	cfg := config.LoadConfig()
 	client, err := database.ConnectToMongoDB(cfg.MongoURI)
 	if err != nil {
@@ -22,8 +23,11 @@ func main() {
 	}
 	db := client.Database(cfg.MongoDBName)
 	database.UserCollection = db.Collection("users")
+<<<<<<< HEAD
 	database.CartCollection = db.Collection("cart") // ⭐ เก็บ collection สำหรับ cart
 
+=======
+>>>>>>> main
 	// Gin setup
 	r := gin.Default()
 
@@ -31,9 +35,13 @@ func main() {
 	store := cookie.NewStore([]byte(cfg.SECRET_KEY))
 	r.Use(sessions.Sessions("mysession", store))
 
-	// ✅ CORS
+	// Cross-origin resource sharing (CORS)
 	r.Use(cors.New(cors.Config{
+<<<<<<< HEAD
 		AllowOrigins:     []string{"http://localhost:8081", "http://192.168.3.58:8081"}, // ใส่ origin ของ frontend
+=======
+		AllowOrigins:     []string{"http://localhost:8081"}, // ใส่ origin ของ frontend
+>>>>>>> main
 		AllowMethods:     []string{"GET", "POST", "OPTIONS", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -41,13 +49,37 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	// route
 	api := r.Group("/api")
+
+	// Show data
 	api.GET("/categories", handlers.GetCategoriesHandler(db))
 	api.GET("/packages", handlers.GetPackagesHandler(db))
+	// Query
+	// Package
+	r.GET("/api/search", handlers.SearchPackagesHandler(db))
+	api.POST("/packages", handlers.CreatePackageHandler(db))
+	api.POST("/packages/delete", handlers.DeletePackageHandler(db))
+	api.POST("/packages/add-pricing", handlers.AddPricingToPackageHandler(db))
+	api.POST("/packages/delete-pricing", handlers.DeletePricingFromPackageHandler(db))
+	api.DELETE("/packages/:id", handlers.DeleteOnePackage(db))
+
+	// Promotion
+	r.GET("/api/promotions", handlers.GetPromotionsHandler(db))
+	r.POST("/api/promotions", handlers.AddPromotionHandler(db))
+	r.POST("/api/calculate-price", handlers.CalculatePriceHandler(db))
+	r.DELETE("/api/promotions/:id", handlers.DeletePromotionHandler(db))
+
+	//  เพิ่ม cart handler
+	cartHandler := handlers.NewCartHandler(db)
+	api.GET("/cart", cartHandler.GetCart)
+	api.POST("/cart", cartHandler.AddToCart)
+	api.DELETE("/cart/:id", cartHandler.DeleteFromCart)
+
+	// Authentication
 	authHandler := handlers.NewAuthHandler(cfg)
 	api.GET("/auth/login/line", authHandler.LineLoginHandler)
 	api.GET("/auth/callback", authHandler.HandleCallback)
-
 	api.GET("/profile", handlers.AuthMiddleware(), func(c *gin.Context) {
 		userId, _ := c.Get("userId")
 		role, _ := c.Get("role")
@@ -59,11 +91,15 @@ func main() {
 	})
 	api.GET("/me", authHandler.GetMe)
 
+<<<<<<< HEAD
 	//  เพิ่ม cart handler
 	cartHandler := handlers.NewCartHandler(db)
 	api.GET("/cart", cartHandler.GetCart)
 	api.POST("/cart", cartHandler.AddToCart)
 	api.DELETE("/cart/:id", cartHandler.DeleteFromCart)
 
+=======
+	// Port
+>>>>>>> main
 	r.Run(":" + cfg.Port)
 }

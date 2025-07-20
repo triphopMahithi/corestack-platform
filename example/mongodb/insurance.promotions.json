@@ -1,0 +1,125 @@
+[{
+  "_id": {
+    "$oid": "687755a0509e4b1ae509da6d"
+  },
+  "name": "โปรโมชั่นลดราคา 10%",
+  "description": "ลดราคาผลิตภัณฑ์ทั้งหมด 10%",
+  "type": "general",
+  "discountPercentage": 10,
+  "validFrom": "2023-01-01",
+  "validTo": "2023-12-31"
+},
+{
+  "_id": {
+    "$oid": "6877581d146ea79c60f2c5f6"
+  },
+  "name": "โปรโมชั่นลดราคา 10%",
+  "description": "ลด 10% สำหรับทุกแพ็กเกจ",
+  "type": "general",
+  "discountPercentage": 10,
+  "validFrom": "2023-01-01",
+  "validTo": "2023-12-31"
+},
+{
+  "_id": {
+    "$oid": "68775c2cd7018b9879362554"
+  },
+  "name": "10% โว้ยยย",
+  "description": "10% โว้ยยย",
+  "type": "general",
+  "discountPercentage": 10,
+  "validFrom": "2025-01-07",
+  "validTo": "2026-12-12"
+},
+{
+  "_id": {
+    "$oid": "68775c85d7018b9879362556"
+  },
+  "name": "10% โว้ยสำหรับ HHK",
+  "description": "10% โว้ยสำหรับ HHK",
+  "type": "package",
+  "discountPercentage": 10,
+  "validFrom": "2025-01-07",
+  "validTo": "2025-01-12",
+  "packageId": "health happy kids"
+},
+{
+  "_id": {
+    "$oid": "68775dc9d7018b9879362558"
+  },
+  "name": "ลดอีก ลดอีก",
+  "description": "โปรโมชั่นลด 12%",
+  "type": "general",
+  "discountPercentage": 12,
+  "validFrom": "2025-12-31",
+  "validTo": "2026-01-01"
+},
+{
+  "_id": {
+    "$oid": "68775df0d7018b9879362559"
+  },
+  "name": "ลดหนัก ลดดี",
+  "description": "โปรลดหนัก 30%",
+  "type": "package",
+  "discountPercentage": 30,
+  "validFrom": "2025-12-31",
+  "validTo": "2026-01-01",
+  "packageId": "health-happy-kid-1m"
+},
+{
+  "_id": {
+    "$oid": "68775e15d7018b987936255a"
+  },
+  "name": "ลดทิ้งแล้วว",
+  "description": "ลดทิ้งแล้วโปร",
+  "type": "category",
+  "discountPercentage": 50,
+  "validFrom": "2025-12-31",
+  "validTo": "2026-01-01",
+  "categoryId": "critical"
+},
+{
+  "_id": {
+    "$oid": "68776adf8d3cf79110bfb8dd"
+  },
+  "name": "โปรทั่วไป",
+  "description": "โปรทั่วไป",
+  "type": "general",
+  "discountPercentage": 0.25,
+  "validFrom": "2024-01-12",
+  "validTo": "2026-01-12"
+},
+{
+  "_id": {
+    "$oid": "68776caf8d3cf79110bfb8de"
+  },
+  "name": "การงาน",
+  "description": "101",
+  "type": "general",
+  "discountPercentage": 1,
+  "validFrom": "2025-11-12",
+  "validTo": "2026-01-01"
+},
+{
+  "_id": {
+    "$oid": "687b5799bf2e1ebf5fab48bd"
+  },
+  "name": "a",
+  "description": "b",
+  "type": "general",
+  "discountPercentage": 1,
+  "validFrom": "0003-01-02",
+  "validTo": "0004-01-02"
+},
+{
+  "_id": {
+    "$oid": "687b5dfda9cf219969c1c085"
+  },
+  "name": "Aa",
+  "description": "Bb",
+  "type": "package",
+  "discountPercentage": 1,
+  "validFrom": "0003-01-02",
+  "validTo": "0004-01-02",
+  "packageId": "ABb"
+}]

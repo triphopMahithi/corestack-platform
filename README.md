@@ -1,4 +1,4 @@
-# (Anan.ip) Full-Stack Web Application 🚀
+# (anan.ip) Full-Stack Web Application 🚀
 
 ## Description 📝
 This project is a Full-Stack Web Application designed to integrate various technologies such as **TypeScript**, **Python**, **Go**, **MongoDB**, **NodeJS**, **NGINX**, and **Docker**. It aims to streamline the development process by combining multiple tools into a single platform. This project is highly beneficial for users who are looking for a robust and scalable solution for building and deploying web applications.
@@ -75,4 +75,4 @@ Provide instructions on how to use the application, such as how to run the serve
 
 ## Supporters & Funding 💡
 
-Tranak Nitiwong - Anan.ip
+**Tranak Nitiwong** - anan.ip
