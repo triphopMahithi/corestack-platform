@@ -41,32 +41,42 @@ interface NewPackage {
 const Admin = () => {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
-  const [packageList, setPackageList] = useState([]); // State to store all packages
+  const [packageList, setPackageList] = useState<NewPackage[]>([]); // State to store all packages
+  const [promotionListState, setPromotionListState] = useState([]); // ข้อมูลโปรโมชั่น
 
   /**
  * 
  *    Page Function
  */
+  function safeSlice<T>(arr: T[] | null | undefined, start: number, end: number): T[] {
+    if (!Array.isArray(arr)) return [];
+  return arr.slice(start, end);
+}
 
   // ฟังก์ชันเกี่ยวกับ ขึ้นหน้าใหม่
   const ItemsPerPage = 5; // จำนวนรายการที่จะแสดงในแต่ละหน้า
-  const [currentPage, setCurrentPage] = useState(1);
+  // current state
+  const [packagePage, setPackagePage] = useState(1);
+  const [promotionPage, setPromotionPage] = useState(1);
 
   // ฟังก์ชันคำนวณข้อมูลที่จะแสดงในแต่ละหน้า
-  const startIndex = (currentPage - 1) * ItemsPerPage;
-  const currentPackages = packageList.slice(startIndex, startIndex + ItemsPerPage);
-
+  const startIndex = (packagePage - 1) * ItemsPerPage;
+  const currentPackages = safeSlice(packageList, startIndex, startIndex + ItemsPerPage);
+  const currentPromotions = safeSlice(promotionListState, (promotionPage - 1) * ItemsPerPage, promotionPage * ItemsPerPage);
+  
   // ฟังก์ชันไปหน้าถัดไป
   const nextPage = () => {
-    if (currentPage < Math.ceil(packageList.length / ItemsPerPage)) {
-      setCurrentPage(currentPage + 1);
+    if (packagePage < Math.ceil(packageList.length / ItemsPerPage)) {
+      setPackagePage(packagePage + 1);
+      setPromotionPage(promotionPage + 1);
     }
   };
 
   // ฟังก์ชันไปหน้าก่อนหน้า
   const prevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
+    if (packagePage > 1) {
+      setPackagePage(packagePage - 1);
+      setPromotionPage(promotionPage - 1);
     }
   };  
   
@@ -77,21 +87,16 @@ const Admin = () => {
   const [noResults, setNoResults] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showMoreInfo, setShowMoreInfo] = useState(false); // สำหรับการแสดงข้อมูลเพิ่มเติม
-  // promotion state
+
     /**
    *  Promotion
    * 
    */
   
 
-  const [promotionListState, setPromotionListState] = useState([]); // ข้อมูลโปรโมชั่น
   const [loading, setLoading] = useState(true); // สถานะการโหลดข้อมูล
   const [error, setError] = useState(null); // ข้อผิดพลาด
-  const currentPromotions = promotionListState.slice(
-    (currentPage - 1) * ItemsPerPage,
-    currentPage * ItemsPerPage
-  );
-  
+
   const [promotionType, setPromotionType] = useState('general');  // default type
   const [promotionName, setPromotionName] = useState('');
   const [promotionDescription, setPromotionDescription] = useState('');
@@ -496,19 +501,50 @@ const handleEditPricing = (index: number) => {
   });
 };
 
+// check minAge and maxAge
+const checkAndUpdateMinMax = async (pricing: Pricing[]) => {
+  const newMinAge = Math.min(...pricing.map(p => Number(p.ageFrom)));
+  const newMaxAge = Math.max(...pricing.map(p => Number(p.ageTo)));
+
+  const currentMinAge = Number(selectedPackage.minAge);
+  const currentMaxAge = Number(selectedPackage.maxAge);
+
+  if (newMinAge !== currentMinAge || newMaxAge !== currentMaxAge) {
+    const MinMaxAgeURL = `${config.Packages}/${selectedPackage.id}/minmax`
+    await fetch(MinMaxAgeURL, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ minAge: newMinAge, maxAge: newMaxAge }),
+    });
+
+    // อัปเดตใน frontend ด้วยถ้าจำเป็น
+    setSelectedPackage(prev => ({
+      ...prev,
+      minAge: newMinAge,
+      maxAge: newMaxAge,
+    }));
+  }
+};
+
 const updatePricingInDB = async (updatedPricing: Pricing, index: number) => {
   try {
-    const response = await fetch(`${config.Packages}/${selectedPackage.id}/pricing/${index}`, {
-      method: 'PATCH', // ✅ ต้องเป็น PATCH ไม่ใช่ GET หรือ POST
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    // 1. Clone pricing array แล้วอัปเดต index
+    const updated = [...selectedPackage.pricing];
+    updated[index] = updatedPricing;
+
+    // 2. PATCH เฉพาะ pricing[index]
+    const pricingURL = `${config.Packages}/${selectedPackage.id}/pricing/${index}`
+    const response = await fetch(pricingURL, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedPricing),
     });
 
     if (!response.ok) throw new Error("Update failed");
 
-    const data = await response.json();
+    // 3. ตรวจสอบ minAge/maxAge
+    await checkAndUpdateMinMax(updated); // <--- เรียกฟังก์ชันแยก
+
     toast({ title: "สำเร็จ", description: "อัปเดตราคาเรียบร้อยแล้ว" });
   } catch (error) {
     console.error("Update error:", error);
@@ -524,13 +560,17 @@ const handleSavePricing = async (index: number) => {
     female: parseFloat(editPrice.female),
   };
 
-  // อัปเดตใน frontend state (UI)
+  // 1. อัปเดตใน UI
   const updated = [...selectedPackage.pricing];
   updated[index] = newData;
   setSelectedPackage({ ...selectedPackage, pricing: updated });
 
-  // ✅ อัปเดตไปยัง backend
+  // 2. อัปเดต backend
   await updatePricingInDB(newData, index);
+
+  // 3. ตรวจสอบ min/max
+  await checkAndUpdateMinMax(updated);
+
   setEditIndex(null);
 };
 
@@ -741,7 +781,12 @@ const handleSavePricing = async (index: number) => {
                   </CardHeader>
 <CardContent>
       <div className="space-y-2">
-        {currentPackages.map((pkg) => (
+        {currentPackages.length === 0 ? (
+      <div className="text-center text-gray-500 py-6">
+        ไม่พบแพ็คเกจในระบบ
+      </div>) : (
+        
+        currentPackages.map((pkg) => (
           <div key={pkg.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div>
               <h4 className="font-medium">{pkg.name}</h4> {/* ใช้ pkg.name สำหรับแสดงชื่อแพ็คเกจ */}
@@ -771,16 +816,21 @@ const handleSavePricing = async (index: number) => {
               </Button>
             </div>
           </div>
-        ))}
+          )
+        )
+      )}
       </div>
 
       {/* แสดงปุ่มเปลี่ยนหน้า */}
       <div className="flex justify-between mt-4">
-        <Button onClick={prevPage} disabled={currentPage === 1}>
+        <Button onClick={prevPage} disabled={packagePage === 1}>
           ก่อนหน้า
         </Button>
-        <Button onClick={nextPage} disabled={currentPage >= Math.ceil(packageList.length / ItemsPerPage)}>
-          ถัดไป
+        <Button
+        onClick={nextPage}
+        disabled={packagePage >= Math.ceil((packageList || []).length / ItemsPerPage)}
+        >
+        ถัดไป
         </Button>
       </div>
     </CardContent>
@@ -945,6 +995,19 @@ const handleSavePricing = async (index: number) => {
       />
     </div>
   </div>
+  <div className="space-y-2">
+  <label className="block text-sm font-medium text-gray-600">ประเภทโปรโมชั่น</label>
+  <select
+    value={promotionType}
+    onChange={(e) => setPromotionType(e.target.value)}
+    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
+  >
+    <option value="">-- กรุณาเลือกประเภท --</option>
+    <option value="package">โปรโมชั่นเฉพาะแพ็คเกจ</option>
+    <option value="category">โปรโมชั่นเฉพาะกลุ่มสัญญา</option>
+    <option value="general">โปรโมชั่นทั่วไป (ใช้ได้กับทุกแพ็คเกจ)</option>
+  </select>
+</div>
 
   {/* เงื่อนไขสำหรับ "โปรโมชั่นเฉพาะแพ็คเกจ" */}
   {promotionType === 'package' && (
@@ -991,65 +1054,68 @@ const handleSavePricing = async (index: number) => {
 
 
 
-    <CardContent>
-      <div className="space-y-2">
-        {currentPromotions.map((promotion) => (
-          <div
-            key={promotion.id}
-            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-          >
-            <div>
-              <h4 className="font-medium">{promotion.Name}</h4>
-                <p className="text-sm text-gray-600">คำอธิบาย : {promotion.Description}</p>
-              <p className="text-sm text-gray-600">
-                ส่วนลด: {promotion.DiscountPercentage}% {/* แสดงส่วนลด */}
-              </p>
-              <p className="text-sm text-gray-600">
-                วันที่เริ่มต้น: {promotion.ValidFrom || 'ไม่ระบุ'}
-              </p>
-              <p className="text-sm text-gray-600">
-                วันที่สิ้นสุด: {promotion.ValidTo || 'ไม่ระบุ'}
-              </p>
-            </div>
-
-            <div className="flex space-x-2">
-              {/* ปุ่มลบ */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDeletePromotion(promotion.ID)}
-                className="text-red-600 hover:text-red-700"
-              >
-                
-                <Trash2 className="w-4 h-4" />
-              </Button>
-              {/* ปุ่มแก้ไข */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleEditPromotion(promotion.ID)}
-                className="text-blue-600 hover:text-blue-700"
-              >
-                <Edit className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        ))}
+<CardContent>
+  <div className="space-y-2">
+    {currentPromotions.length === 0 ? (
+      <div className="text-center text-gray-500 py-6">
+        ไม่พบโปรโมชั่นในระบบ
       </div>
-
-      {/* แสดงปุ่มเปลี่ยนหน้า */}
-      <div className="flex justify-between mt-4">
-        <Button onClick={prevPage} disabled={currentPage === 1}>
-          ก่อนหน้า
-        </Button>
-        <Button
-          onClick={nextPage}
-          disabled={currentPage >= Math.ceil(promotionListState.length / ItemsPerPage)}
+    ) : (
+      currentPromotions.map((promotion) => (
+        <div
+          key={promotion.id}
+          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
         >
-          ถัดไป
-        </Button>
-      </div>
-    </CardContent>
+          <div>
+            <h4 className="font-medium">{promotion.Name}</h4>
+            <p className="text-sm text-gray-600">คำอธิบาย: {promotion.Description}</p>
+            <p className="text-sm text-gray-600">ส่วนลด: {promotion.DiscountPercentage}%</p>
+            <p className="text-sm text-gray-600">
+              วันที่เริ่มต้น: {promotion.ValidFrom || 'ไม่ระบุ'}
+            </p>
+            <p className="text-sm text-gray-600">
+              วันที่สิ้นสุด: {promotion.ValidTo || 'ไม่ระบุ'}
+            </p>
+          </div>
+
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDeletePromotion(promotion.ID)}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleEditPromotion(promotion.ID)}
+              className="text-blue-600 hover:text-blue-700"
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+
+  {/* ปุ่มเปลี่ยนหน้า */}
+  {Array.isArray(promotionListState) && promotionListState.length > ItemsPerPage && (
+    <div className="flex justify-between mt-6">
+      <Button onClick={prevPage} disabled={promotionPage === 1}>
+        ก่อนหน้า
+      </Button>
+      <Button
+        onClick={nextPage}
+        disabled={promotionPage >= Math.ceil(promotionListState.length / ItemsPerPage)}
+      >
+        ถัดไป
+      </Button>
+    </div>
+  )}
+</CardContent>
 
 
 
