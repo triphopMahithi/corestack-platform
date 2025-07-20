@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -24,10 +25,9 @@ func NewCartHandler(db *mongo.Database) *CartHandler {
 	}
 }
 
-// โครงสร้าง input สำหรับ AddToCart
 type AddToCartInput struct {
-	Username    string             `json:"username"` // เปลี่ยนชื่อ field เป็น Username (ตัว U ใหญ่สำหรับ export)
-	UserID      string             `json:"userId"`   // เพิ่ม UserID เพื่อเก็บ ID ของผู้ใช้
+	Username    string             `json:"username"`
+	UserID      string             `json:"userId"`
 	PackageName string             `json:"packageName"`
 	StartAge    int                `json:"startAge"`
 	EndAge      int                `json:"endAge"`
@@ -48,7 +48,7 @@ func (h *CartHandler) GetCart(c *gin.Context) {
 	var cartItem models.CartItem
 	err := h.Collection.FindOne(ctx, bson.M{"userId": userId}).Decode(&cartItem)
 	if err == mongo.ErrNoDocuments {
-		c.JSON(http.StatusOK, []models.CartEntry{})
+		c.JSON(http.StatusOK, []models.CartEntry{}) // ส่ง array ว่างกลับไป
 		return
 	}
 	if err != nil {
@@ -61,14 +61,7 @@ func (h *CartHandler) GetCart(c *gin.Context) {
 
 // POST /api/cart
 func (h *CartHandler) AddToCart(c *gin.Context) {
-	var input struct {
-		Username    string             `json:"username"`
-		UserID      string             `json:"userId"`
-		PackageName string             `json:"packageName"`
-		StartAge    int                `json:"startAge"`
-		EndAge      int                `json:"endAge"`
-		Premium     models.PremiumInfo `json:"premium"`
-	}
+	var input AddToCartInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -78,8 +71,9 @@ func (h *CartHandler) AddToCart(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// 🔁 Upsert: ถ้า user มีอยู่แล้ว จะ push รายการใหม่เข้า cart array
-	filter := bson.M{"userId": input.UserID}
+	// สร้าง ObjectID ใหม่ให้ item ใน cart
+	itemID := primitive.NewObjectID()
+
 	update := bson.M{
 		"$set": bson.M{
 			"userId":   input.UserID,
@@ -87,6 +81,7 @@ func (h *CartHandler) AddToCart(c *gin.Context) {
 		},
 		"$push": bson.M{
 			"cart": bson.M{
+				"_id":         itemID,
 				"packageName": input.PackageName,
 				"startAge":    input.StartAge,
 				"endAge":      input.EndAge,
@@ -95,9 +90,9 @@ func (h *CartHandler) AddToCart(c *gin.Context) {
 			},
 		},
 	}
-	opts := options.Update().SetUpsert(true)
 
-	_, err := h.Collection.UpdateOne(ctx, filter, update, opts)
+	opts := options.Update().SetUpsert(true)
+	_, err := h.Collection.UpdateOne(ctx, bson.M{"userId": input.UserID}, update, opts)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -107,13 +102,18 @@ func (h *CartHandler) AddToCart(c *gin.Context) {
 }
 
 // DELETE /api/cart/:id?userId=xxx
-// ลบรายการหนึ่งจาก cart array ตาม packageName
 func (h *CartHandler) DeleteFromCart(c *gin.Context) {
 	userId := c.Query("userId")
-	packageName := c.Param("id") // ใช้ packageName เป็น ID (หรือเปลี่ยนเป็น item _id ถ้ามี)
+	itemIDStr := c.Param("id") // ตอนนี้ id คือ ObjectID ของแต่ละรายการใน cart
 
-	if userId == "" || packageName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing userId or packageName"})
+	if userId == "" || itemIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing userId or item id"})
+		return
+	}
+
+	itemID, err := primitive.ObjectIDFromHex(itemIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item id"})
 		return
 	}
 
@@ -123,11 +123,11 @@ func (h *CartHandler) DeleteFromCart(c *gin.Context) {
 	filter := bson.M{"userId": userId}
 	update := bson.M{
 		"$pull": bson.M{
-			"cart": bson.M{"packageName": packageName},
+			"cart": bson.M{"_id": itemID},
 		},
 	}
 
-	_, err := h.Collection.UpdateOne(ctx, filter, update)
+	_, err = h.Collection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

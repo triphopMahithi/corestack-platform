@@ -9,6 +9,9 @@ import Index from "./pages/Index";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import LoginSuccess from './pages/LoginSuccess';
+import { PromotionProvider } from '@/contexts/PromotionContext';
+
+
 
 const queryClient = new QueryClient();
 
@@ -16,6 +19,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
+        <PromotionProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -27,6 +31,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        </PromotionProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
