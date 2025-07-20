@@ -48,7 +48,10 @@ func main() {
 	// Show data
 	api.GET("/categories", handlers.GetCategoriesHandler(db))
 	api.GET("/packages", handlers.GetPackagesHandler(db))
+
+	// Update
 	api.PATCH("/packages/:id/pricing/:index", handlers.UpdatePricingHandler(db))
+	api.PATCH("/packages/:id/minmax", handlers.UpdateMinMaxHandler(db))
 	// Query
 	// Package
 	r.GET("/api/search", handlers.SearchPackagesHandler(db))
