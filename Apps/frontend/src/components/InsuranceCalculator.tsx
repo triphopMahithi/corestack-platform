@@ -67,6 +67,7 @@ interface CartItem {
 }
 
 interface User {
+  id?: string;
   _id?: string;
   userId?: string;
   username?: string;
@@ -97,7 +98,7 @@ interface SelectedPackage {
 
 const InsuranceCalculator = () => {
   const { user } = useAuth();
-  const userId = user?.id || ''; // ดึง userId มาใช้งานแบบปลอดภัย
+  const userId = user?._id || ''; // ดึง userId มาใช้งานแบบปลอดภัย
   console.log("user:", user);
 
   // ===== State Management =====
@@ -738,7 +739,7 @@ showResult && calculatedPremium && (() => {
 
     return (
 <QuoteResult 
-  
+  formData={formData}
   premium={calculatedPremium}
   selectedPlans={selectedPlans}
   cartItems={cart}
