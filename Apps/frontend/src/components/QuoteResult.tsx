@@ -28,7 +28,6 @@ interface QuoteResultProps {
     quarterly: number;
     semiAnnual: number;
     annual: number;
-    total: number;
   };
   selectedPlans: Array<{
     id: string;

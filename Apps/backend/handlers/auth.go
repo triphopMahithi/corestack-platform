@@ -12,12 +12,14 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type AuthHandler struct {
@@ -81,80 +83,93 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 	log.Printf(">>> GetMe - user: %+v", user)
 }
 
-// #TODO: เพื่อความปลอดภัยของผู้ใช้ควรทำ JWT กับ Middleware
 func (h *AuthHandler) HandleCallback(c *gin.Context) {
-
-	// ✅ ตรวจสอบ state ก่อน
 	session := sessions.Default(c)
 	storedState := session.Get("oauthState")
-	if storedState == nil || c.Query("state") != storedState {
+	queryState := c.Query("state")
+
+	if storedState == nil || queryState != storedState {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state (CSRF protection)"})
 		return
 	}
 
-	// 🔐 หาก state ถูกต้อง → ทำขั้นตอน login ต่อไปได้ตามปกติ
 	code := c.Query("code")
 	if code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing code"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing code from LINE"})
 		return
 	}
 
-	// Step 1: ดึง access token จาก LINE
+	// ✅ Step 1: ขอ access token จาก LINE
 	token, err := h.getAccessToken(code)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get LINE access token"})
 		return
 	}
 
-	// Step 2: ดึง user profile จาก LINE ด้วย access token
+	// ✅ Step 2: ขอข้อมูลโปรไฟล์ผู้ใช้จาก LINE
 	profile, err := h.getUserProfile(token.AccessToken)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get profile"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch LINE profile"})
 		return
 	}
 
-	// Step 3: ตรวจสอบว่า user มีอยู่แล้วหรือไม่
-	var existing models.User
-	err = database.UserCollection.FindOne(context.TODO(), bson.M{"lineUserId": profile.UserID}).Decode(&existing)
-
+	// ✅ Step 3: ตรวจสอบหรือสร้าง user ใน MongoDB
+	ctx := context.TODO()
 	now := time.Now()
-	if err == nil {
-		// ✅ พบ user เดิม → อัปเดต LastLogin และ UpdatedAt
-		existing.LastLogin = now
-		existing.UpdatedAt = now
-		_, err = database.UserCollection.ReplaceOne(context.TODO(),
-			bson.M{"_id": existing.ID}, existing)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
-			return
-		}
-	} else {
-		// ❌ ไม่พบ user เดิม → สร้างใหม่
-		newUser := models.User{
+	var user models.User
+
+	err = database.UserCollection.FindOne(ctx, bson.M{"lineUserId": profile.UserID}).Decode(&user)
+	if err == mongo.ErrNoDocuments {
+		// ไม่พบ user → สร้างใหม่
+		user = models.User{
 			Username:   profile.DisplayName,
 			LineUserID: profile.UserID,
-			Role:       "user", // ค่าเริ่มต้น หรือจะตั้งเงื่อนไขพิเศษที่นี่
+			Role:       "user",
+			Provider:   "Line",
 			CreatedAt:  now,
 			UpdatedAt:  now,
 			LastLogin:  now,
 		}
-		_, err = database.UserCollection.InsertOne(context.TODO(), newUser)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		if _, err := database.UserCollection.InsertOne(ctx, user); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new user"})
 			return
 		}
-		existing = newUser // ใช้สำหรับ JWT ด้านล่าง
-	}
-
-	// Step 4: สร้าง JWT
-	jwtToken, err := utils.GenerateJWT(existing.LineUserID, existing.Role)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+	} else if err == nil {
+		// ✅ พบ user เดิม → อัปเดต lastLogin
+		update := bson.M{
+			"$set": bson.M{
+				"lastLogin":  now,
+				"updatedAt":  now,
+				"lastIP":     c.ClientIP(),
+				"lastDevice": c.Request.UserAgent(),
+			},
+			"$inc": bson.M{"loginCount": 1},
+		}
+		if _, err := database.UserCollection.UpdateOne(ctx, bson.M{"_id": user.ID}, update); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user login info"})
+			return
+		}
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
-	// Step 5: Redirect ไป frontend พร้อม JWT และ role
-	redirectURL := fmt.Sprintf("%s/login/success?token=%s&role=%s", h.Config.FRONTEND_URL, jwtToken, existing.Role)
+	// ✅ Step 4: สร้าง JWT จาก LineUserID + Role
+	jwtToken, err := utils.GenerateJWT(user.LineUserID, user.Role)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate JWT"})
+		return
+	}
+
+	// ✅ Step 5: Redirect กลับไปยัง frontend พร้อม token, userId, username, role
+	redirectURL := fmt.Sprintf(
+		"%s/login/success?token=%s&userId=%s&username=%s&role=%s",
+		h.Config.FRONTEND_URL,
+		url.QueryEscape(jwtToken),
+		url.QueryEscape(user.LineUserID),
+		url.QueryEscape(user.Username),
+		url.QueryEscape(user.Role),
+	)
 	c.Redirect(http.StatusFound, redirectURL)
 }
 

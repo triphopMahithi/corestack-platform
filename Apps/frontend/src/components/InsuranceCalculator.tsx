@@ -14,7 +14,7 @@ import { createFormStepHandlers } from '@/utils/formStepHandlers';
 import { calculateTieredPremium, getPricingTiersFromPackage } from '@/utils/premiumCalculator';
 import { parseCoverageFromText } from '@/utils/ParserHandler';
 import { useAuth } from '../contexts/AuthContext';
-
+import { config } from '@/config';
 interface CalculatorData {
   gender: string;
   currentAge: string;
@@ -27,13 +27,13 @@ interface CalculatorData {
 interface StepData {
   selectedPackage: string;
   selectedPlan: string;
-  searchResults: any;
-  savedData: any;
+  searchResults: unknown;
+  savedData: unknown;
 }
 
 interface PackageObject {
   name: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface PremiumInfo {
@@ -46,23 +46,6 @@ interface CartEntry {
   endAge: number;
   premium: PremiumInfo;
   dateAdded: string;
-}
-
-interface CartItem {
-  id: string;
-  userId: string;
-  username: string;
-  packageName: string | { name: string } | Array<{ name: string }>;
-  startAge: number;
-  endAge: number;
-  premium: { annual: number };
-  dateAdded: string;
-}
-
-interface User {
-  _id?: string;
-  userId?: string;
-  username?: string;
 }
 
 interface Plan {
@@ -103,7 +86,7 @@ const InsuranceCalculator = () => {
     packages: []
   });
   // การเก็บสถานะข้อมูลที่เรียกใช้มาจาก API
-  const [packagesData, setPackagesData] = useState<any[]>([]);
+  const [packagesData, setPackagesData] = useState<PackageObject[]>([]);
   const [categoriesData, setCategoriesData] = useState<Record<string, string[]>>({});
   const [cart, setCart] = useState<CartEntry[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
@@ -130,13 +113,13 @@ const InsuranceCalculator = () => {
 
   const { toast } = useToast();
 
-  // ✅ ย้าย fetchCart ออกมาเป็นฟังก์ชันแยกเพื่อให้สามารถเรียกใช้ได้จากที่อื่น
 const fetchCart = async () => {
   try {
     const userId = user?._id || user?.userId || "";
     if (!userId) return;
 
-    const res = await fetch(`http://localhost:8080/api/cart?userId=${userId}`);
+    const cartURL = `${config.Cart}?userId=${userId}`
+    const res = await fetch(cartURL);
     if (!res.ok) {
       console.error("Fetch cart failed");
       return;
@@ -163,8 +146,8 @@ const fetchCart = async () => {
       try {
         // ดึงทั้ง packages และ categories พร้อมกัน
         const [pkgRes, catRes] = await Promise.all([
-          fetch('http://localhost:8080/api/packages'),
-          fetch('http://localhost:8080/api/categories'),
+          fetch(config.Packages),
+          fetch(config.Categories),
         ]);
       
         const packages = await pkgRes.json();
@@ -174,7 +157,7 @@ const fetchCart = async () => {
       
         // แปลง category array ให้เป็น object: { categoryId: [packageId, ...] }
         const categoryMap: Record<string, string[]> = {};
-        categories.forEach((cat: any) => {
+        categories.forEach((cat: { id: string; packages: string[] }) => {
           categoryMap[cat.id] = cat.packages;
         });
         setCategoriesData(categoryMap);
@@ -191,9 +174,10 @@ const fetchCart = async () => {
       if (user) {
     fetchCart();
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // 🛒 เพิ่ม & ลบ cart
+  // เพิ่ม & ลบ cart
   const handleAddToCart = async (item: Omit<CartEntry, "dateAdded">) => {
     try {
       const userId = user?._id || user?.userId || "";
@@ -210,7 +194,7 @@ const fetchCart = async () => {
         dateAdded: new Date().toISOString(),
       };
 
-      const res = await fetch("http://localhost:8080/api/cart", {
+      const res = await fetch(config.Cart, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newItemWithUser),
@@ -222,10 +206,10 @@ const fetchCart = async () => {
         return;
       }
 
-      // ✅ ดึงข้อมูล cart ใหม่จาก backend เพื่ออัพเดต UI ทันที
+      // ดึงข้อมูล cart ใหม่จาก backend เพื่ออัพเดต UI ทันที
       await fetchCart();
 
-      // ✅ แสดง toast แจ้งเตือนเมื่อเพิ่มสำเร็จ
+      // แสดง toast แจ้งเตือนเมื่อเพิ่มสำเร็จ
       toast({
         title: "เพิ่มลงตะกร้าสำเร็จ",
         description: `เพิ่ม ${item.packageName} ลงตะกร้าแล้ว`,
@@ -242,14 +226,15 @@ const fetchCart = async () => {
     }
   };
 
-  // ✅ แก้ไข handleRemoveFromCart ให้ใช้ ID แทน packageName
+  // แก้ไข handleRemoveFromCart ให้ใช้ ID แทน packageName
 const handleRemoveFromCart = async (itemId: string) => {
   try {
     const userId = user?._id || user?.userId || "";
     if (!userId) return;
 
+    const REMOVE_ITEM_URL = `${config.Cart}/${itemId}?userId=${userId}`
     const res = await fetch(
-      `http://localhost:8080/api/cart/${itemId}?userId=${userId}`,
+      REMOVE_ITEM_URL,
       { method: "DELETE" }
     );
 
@@ -286,12 +271,20 @@ const handleRemoveFromCart = async (itemId: string) => {
 
     return packagesData
       .filter(pkg => {
-        const withinAge = age >= pkg.minAge && age <= pkg.maxAge;
+        const withinAge = age >= Number(pkg.minAge) && age <= Number(pkg.maxAge);
         const genderOK = !pkg.genderRestriction || pkg.genderRestriction === gender;
         return withinAge && genderOK;
       })
       .map(pkg => pkg.name);
   };
+
+  interface PricingTier {
+    ageFrom: number;
+    ageTo: number;
+    male?: number;
+    female?: number;
+    [key: string]: number | undefined;
+  }
 
   const getPlanOptionsFromPricing = (packageName: string): { label: string }[] => {
     const pkg = packagesData.find(p => p.name === packageName);
@@ -302,9 +295,9 @@ const handleRemoveFromCart = async (itemId: string) => {
 
     const gender = formData.gender === 'male' ? 'male' : 'female';
 
-    // ✅ ค้นหาเฉพาะช่วงอายุที่ตรงกับ currentAge
-    const matching = pkg.pricing.filter((p: any) => currentAge >= p.ageFrom && currentAge <= p.ageTo);
-    return matching.map((p: any) => {
+    //  ค้นหาเฉพาะช่วงอายุที่ตรงกับ currentAge
+    const matching = (pkg.pricing as PricingTier[]).filter((p) => currentAge >= p.ageFrom && currentAge <= p.ageTo);
+    return matching.map((p) => {
       const ageLabel = `อายุ ${p.ageFrom} ถึง ${p.ageTo}`;
       const price = p[gender];
 
@@ -319,7 +312,6 @@ const handleRemoveFromCart = async (itemId: string) => {
     handlePackageSelection,
     selectPackage,
     selectPlan,
-    handleSave,
     resetForm,
     goBackStep
   } = createFormStepHandlers({
@@ -386,7 +378,8 @@ const handleRemoveFromCart = async (itemId: string) => {
         * สามารถทำงานได้ : เพศ (gender) กับ ความคุ้มครองจนถึงอายุ (CoverageAge)
         * ผลลัพธ์        : package -> plan (price.male/price.female)
         */
-        const eligiblePackages = getEligiblePackages();
+        {
+          const eligiblePackages = getEligiblePackages();
         return (
           <Step1
             eligiblePackages={eligiblePackages}
@@ -394,9 +387,11 @@ const handleRemoveFromCart = async (itemId: string) => {
             goBack={goBackStep}
           />
         );
+      }
 
       case 2:
-        const availablePlans = getPlanOptionsFromPricing(stepData.selectedPackage);
+        {
+          const availablePlans = getPlanOptionsFromPricing(stepData.selectedPackage);
         return (
           <Step2
             availablePlans={availablePlans}
@@ -405,15 +400,16 @@ const handleRemoveFromCart = async (itemId: string) => {
             goBack={goBackStep}
           />
         );
+      }
 
       case 3:
         /**
          * ตรวจสอบข้อมูลที่จำเป็นต้องใช้ในขั้นตอนที่ 3 (Step3) ดึงข้อมูลที่ผู้ใช้เลือกมาซึ่งเป็น object
          * ทำการแปลงข้อมูล เพศกับช่วงอายุให้เรียบร้อย
          */
+        {
         const selectedPackageName = stepData.selectedPackage;
         const pkg = packagesData.find(p => p.name === selectedPackageName);
-
         const gender = formData.gender as 'male' | 'female';
         const currentAge = parseInt(formData.currentAge);
         const coverageAge = formData.coverageAge ? parseInt(formData.coverageAge) : currentAge;
@@ -438,7 +434,7 @@ const handleRemoveFromCart = async (itemId: string) => {
             <p className="text-red-500">ข้อมูลไม่ครบ ไม่สามารถแสดงเบี้ยประกันได้</p>
           )
         );
-
+      }
       default:
         return null;
     }
