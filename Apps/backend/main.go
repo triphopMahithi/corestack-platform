@@ -6,6 +6,7 @@ import (
 	"backend/handlers"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -32,7 +33,9 @@ func main() {
 
 	// Cross-origin resource sharing (CORS)
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:8081"}, // ใส่ origin ของ frontend
+		AllowOriginFunc: func(origin string) bool {
+			return strings.HasPrefix(origin, "http://localhost")
+		},
 		AllowMethods:     []string{"GET", "POST", "PATCH", "OPTIONS", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -73,6 +76,9 @@ func main() {
 	api.POST("/cart", cartHandler.AddToCart)
 	api.DELETE("/cart/:id", cartHandler.DeleteFromCart)
 
+	// Upload
+	uploadHandler := handlers.NewUploadHandler(db)
+	api.POST("/upload", uploadHandler.HandleUpload)
 	// login
 	api.POST("/login", handlers.LoginHandler(db))
 
