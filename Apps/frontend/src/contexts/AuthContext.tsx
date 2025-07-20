@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { config } from "@/config";
+
 
 interface User {
   _id: string;
@@ -11,17 +11,17 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<boolean>;
-  loginWithUserData: (rawData: { userId: string; username: string; role: 'admin' | 'user' }) => void;
+  loginWithUserData: (rawData: any) => void;
   logout: () => void;
   isAdmin: boolean;
 }
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  login: async () => false,
-  loginWithUserData: () => {},
-  logout: () => {},
-  isAdmin: false,
-});
+const AuthContext = createContext<AuthContextType>(null as any);
+//const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// const ADMIN_CREDENTIALS = {
+//   username: 'aabbcc',
+//   password: '11233'
+// };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -34,9 +34,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+//const login = async (
+//  username: string,
+//  password: string,
+//  role: 'admin' | 'user' = 'user'
+//): Promise<boolean> => {
+//  const user: User = { username, role };
+//  setUser({ username, role });
+//  localStorage.setItem('currentUser', JSON.stringify(user));
+//  return true;
+//};
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      const res = await fetch(config.LocalLogin, {
+      const res = await fetch('http://localhost:8080/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -60,8 +70,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // method loginWithUserData
-  const loginWithUserData = (rawData: { userId: string; username: string; role: 'admin' | 'user' }) => {
+  // ✅ เพิ่ม method loginWithUserData
+  const loginWithUserData = (rawData: any) => {
     const mappedUser: User = {
       _id: rawData.userId,
       userId: rawData.userId,
@@ -70,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     setUser(mappedUser);
     localStorage.setItem('currentUser', JSON.stringify(mappedUser));
-    console.log("loginWithUserData saved user:", mappedUser);
+    console.log("✅ loginWithUserData saved user:", mappedUser);
   };
 
   const logout = () => {

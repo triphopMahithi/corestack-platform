@@ -33,7 +33,7 @@ func main() {
 	// Cross-origin resource sharing (CORS)
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:8081"}, // ใส่ origin ของ frontend
-		AllowMethods:     []string{"GET", "POST", "PATCH", "OPTIONS", "DELETE"},
+		AllowMethods:     []string{"GET", "POST", "OPTIONS", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -42,16 +42,10 @@ func main() {
 
 	// route
 	api := r.Group("/api")
-	// register
-	api.POST("/register", handlers.RegisterHandler(db))
 
 	// Show data
 	api.GET("/categories", handlers.GetCategoriesHandler(db))
 	api.GET("/packages", handlers.GetPackagesHandler(db))
-
-	// Update
-	api.PATCH("/packages/:id/pricing/:index", handlers.UpdatePricingHandler(db))
-	api.PATCH("/packages/:id/minmax", handlers.UpdateMinMaxHandler(db))
 	// Query
 	// Package
 	r.GET("/api/search", handlers.SearchPackagesHandler(db))
@@ -72,9 +66,6 @@ func main() {
 	api.GET("/cart", cartHandler.GetCart)
 	api.POST("/cart", cartHandler.AddToCart)
 	api.DELETE("/cart/:id", cartHandler.DeleteFromCart)
-
-	// login
-	api.POST("/login", handlers.LoginHandler(db))
 
 	// Authentication
 	authHandler := handlers.NewAuthHandler(cfg)
