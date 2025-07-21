@@ -14,12 +14,9 @@ import { createFormStepHandlers } from '@/utils/formStepHandlers';
 import { calculateTieredPremium, getPricingTiersFromPackage } from '@/utils/premiumCalculator';
 import { parseCoverageFromText } from '@/utils/ParserHandler';
 import { useAuth } from '../contexts/AuthContext';
-<<<<<<< HEAD
-=======
 import { PromotionProvider, usePromotion } from '@/contexts/PromotionContext';
 import PromotionSelectorDialog from '@/components/PromotionSelector';
 import { Promotion, CouponType,PremiumResult } from '@/lib/types';
->>>>>>> main
 
 interface CalculatorData {
   gender: string;
@@ -37,13 +34,6 @@ interface StepData {
   savedData: any;
 }
 
-<<<<<<< HEAD
-interface PackageObject {
-  name: string;
-  [key: string]: any;
-}
-
-=======
 interface NewCartEntry {
   packageName: string;
   startAge: number;
@@ -52,16 +42,12 @@ interface NewCartEntry {
 }
 
 
->>>>>>> main
 interface PremiumInfo {
   annual: number;
 }
 
 interface CartEntry {
-<<<<<<< HEAD
-=======
   id: string;
->>>>>>> main
   packageName: string;
   startAge: number;
   endAge: number;
@@ -111,10 +97,7 @@ interface SelectedPackage {
 
 const InsuranceCalculator = () => {
   const { user } = useAuth();
-<<<<<<< HEAD
-=======
   const userId = user?.id || ''; // ดึง userId มาใช้งานแบบปลอดภัย
->>>>>>> main
   console.log("user:", user);
 
   // ===== State Management =====
@@ -163,22 +146,11 @@ const fetchCart = async () => {
 
     const res = await fetch(`http://localhost:8080/api/cart?userId=${userId}`);
     if (!res.ok) {
-<<<<<<< HEAD
-      console.error("Fetch cart failed");
-=======
       console.error("Fetch cart failed with status", res.status);
->>>>>>> main
       return;
     }
 
     const data = await res.json();
-<<<<<<< HEAD
-    console.log("Fetched cart:", data);
-
-    if (Array.isArray(data)) {
-      setCart(data);
-    } else {
-=======
     console.log("Fetched cart data:", data);
 
     // ตรวจสอบว่าข้อมูลที่ได้เป็น array หรือไม่
@@ -189,7 +161,6 @@ const fetchCart = async () => {
       setCart(data.cart);
     } else {
       console.warn("Unexpected cart data structure:", data);
->>>>>>> main
       setCart([]);
     }
   } catch (error) {
@@ -198,12 +169,9 @@ const fetchCart = async () => {
 };
 
 
-<<<<<<< HEAD
-=======
 
 
 
->>>>>>> main
   // Loading API 
   /* เชื่อมโยงจาก Frontend-to-Backend โดยใช้ res ไปยัง PORT:8080 (Go lang) backend */
   useEffect(() => {
@@ -242,55 +210,6 @@ const fetchCart = async () => {
   }, [user]);
 
   // 🛒 เพิ่ม & ลบ cart
-<<<<<<< HEAD
-  const handleAddToCart = async (item: Omit<CartEntry, "dateAdded">) => {
-    try {
-      const userId = user?._id || user?.userId || "";
-      const username = user?.username || "Unknown User";
-      if (!userId) {
-        console.error("No userId, cannot add to cart");
-        return;
-      }
-
-      const newItemWithUser = {
-        ...item,
-        userId,
-        username,
-        dateAdded: new Date().toISOString(),
-      };
-
-      const res = await fetch("http://localhost:8080/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newItemWithUser),
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Backend error:", errorText);
-        return;
-      }
-
-      // ✅ ดึงข้อมูล cart ใหม่จาก backend เพื่ออัพเดต UI ทันที
-      await fetchCart();
-
-      // ✅ แสดง toast แจ้งเตือนเมื่อเพิ่มสำเร็จ
-      toast({
-        title: "เพิ่มลงตะกร้าสำเร็จ",
-        description: `เพิ่ม ${item.packageName} ลงตะกร้าแล้ว`,
-      });
-
-      setCurrentStep(1);
-    } catch (error) {
-      console.error("เพิ่มตะกร้าล้มเหลว", error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถเพิ่มรายการลงตะกร้าได้",
-        variant: "destructive",
-      });
-    }
-  };
-=======
   const handleAddToCart = async (item: NewCartEntry) => {
   try {
     const userId = user?._id || user?.userId || "";
@@ -336,7 +255,6 @@ const fetchCart = async () => {
     });
   }
 };
->>>>>>> main
 
   // ✅ แก้ไข handleRemoveFromCart ให้ใช้ ID แทน packageName
 const handleRemoveFromCart = async (itemId: string) => {
@@ -543,11 +461,6 @@ const handleRemoveFromCart = async (itemId: string) => {
   // ✅ ปรับปรุง flattenedCart ให้มีการจัดการ ID ที่ถูกต้อง
 const flattenedCart = cart.map((entry, index) => ({
   ...entry,
-<<<<<<< HEAD
-  uniqueId: `${entry.packageName}-${entry.startAge}-${entry.endAge}-${index}`
-}));
-
-=======
   id: entry.id || `cart-item-${index}`, // ใช้ _id ถ้ามี ไม่งั้นใช้ index
   uniqueId: `${entry.packageName}-${entry.startAge}-${entry.endAge}-${index}`
 }));
@@ -579,7 +492,6 @@ const discountAmount = React.useMemo(() => {
 const discountedTotal = baseTotal - discountAmount;
 
 
->>>>>>> main
   return (
     <section id="calculator" className="py-8 bg-gray-50">
       <div className="container mx-auto px-3">
@@ -738,44 +650,6 @@ const discountedTotal = baseTotal - discountAmount;
               */}
 
               {/* 🛒 ตะกร้า */}
-<<<<<<< HEAD
-              {Array.isArray(flattenedCart) && (
-                <div className="border rounded p-3 space-y-2 mt-4">
-                  <h5 className="font-semibold">🛒 ตะกร้าของคุณ:</h5>
-                  {flattenedCart.length > 0 ? (
-                    <>
-                      {flattenedCart.map((entry, index) => (
-                        <div
-                          key={entry.uniqueId || index}
-                          className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded"
-                        >
-                          <span>
-                            {entry.packageName} (อายุ {entry.startAge}–{entry.endAge}) – ฿
-                            {entry.premium?.annual
-                              ? entry.premium.annual.toLocaleString()
-                              : "-"}
-                          </span>
-                          <button
-                            onClick={() => handleRemoveFromCart(entry.packageName)}
-                            className="text-red-500 text-xs hover:text-red-700 px-2 py-1 rounded hover:bg-red-50"
-                          >
-                            ลบ
-                          </button>
-                        </div>
-                      ))}
-                      <div className="font-semibold border-t pt-2">
-                        รวม: ฿
-                        {flattenedCart
-                          .reduce((sum, i) => sum + (i.premium?.annual || 0), 0)
-                          .toLocaleString()}
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-sm text-gray-500">ยังไม่มีรายการในตะกร้า</p>
-                  )}
-                </div>
-              )}
-=======
 {Array.isArray(flattenedCart) && (
   <div className="border rounded p-3 space-y-2 mt-4">
     <h5 className="font-semibold">ตะกร้าของคุณ:</h5>
@@ -826,7 +700,6 @@ const discountedTotal = baseTotal - discountAmount;
 
               {/* Promotion Selector */}
               <PromotionSelectorDialog />
->>>>>>> main
   
               <div className="space-y-3 pt-4 border-t">
                 <Button 
@@ -857,26 +730,13 @@ const discountedTotal = baseTotal - discountAmount;
           {
 
 
-<<<<<<< HEAD
-  showResult && calculatedPremium && (() => {
-=======
   
 showResult && calculatedPremium && (() => {
->>>>>>> main
     const packageName = stepData.selectedPackage || 'แพ็กเกจที่เลือก';
     const coverage = parseCoverageFromText(packageName) ?? 0;
     
 
     return (
-<<<<<<< HEAD
-      <QuoteResult 
-        formData={formData}
-        premium={calculatedPremium}
-        selectedPlans={selectedPlans}
-        cartItems={cart}
-
-      />
-=======
 <QuoteResult 
   
   premium={calculatedPremium}
@@ -887,7 +747,6 @@ showResult && calculatedPremium && (() => {
 />
 
 
->>>>>>> main
     );
   })()
 }

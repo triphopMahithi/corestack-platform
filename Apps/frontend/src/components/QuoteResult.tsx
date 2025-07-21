@@ -5,9 +5,6 @@ import { Download, Calendar, Share2, Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
 
-<<<<<<< HEAD
-interface CartEntry {
-=======
 interface Promotion {
   id: string;
   name: string;
@@ -20,21 +17,14 @@ interface Promotion {
 
 interface CartEntry {
   id: string;
->>>>>>> main
   packageName: string;
   startAge: number;
   endAge: number;
   premium: {
-<<<<<<< HEAD
-    annual: number;
-  };
-  dateAdded: string;
-=======
     finalPremium: number | null | undefined;
     annual: number;
   };
   dateAdded?: string;
->>>>>>> main
 }
 
 interface QuoteResultProps {
@@ -56,10 +46,7 @@ interface QuoteResultProps {
     basePremium: number;
   }>;
   cartItems: CartEntry[];
-<<<<<<< HEAD
-=======
   selectedPromotion: Promotion | null;
->>>>>>> main
 }
 
 const QuoteResult: React.FC<QuoteResultProps> = ({
@@ -67,40 +54,18 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
   premium,
   selectedPlans,
   cartItems,
-<<<<<<< HEAD
-=======
   selectedPromotion,
->>>>>>> main
 }) => {
   const { toast } = useToast();
   const genderText = formData.gender === 'male' ? 'ชาย' : 'หญิง';
 
   const generatePDF = async () => {
-<<<<<<< HEAD
-    toast({
-      title: 'กำลังสร้าง PDF',
-      description: 'กรุณารอสักครู่...',
-    });
-    try {
-      await generateQuotePDF('quote-content', 'insurance-quote');
-      toast({
-        title: 'ดาวน์โหลดสำเร็จ',
-        description: 'ใบเสนอราคาถูกบันทึกแล้ว',
-      });
-    } catch (error) {
-      toast({
-        title: 'เกิดข้อผิดพลาด',
-        description: 'ไม่สามารถสร้าง PDF ได้',
-        variant: 'destructive',
-      });
-=======
     toast({ title: 'กำลังสร้าง PDF', description: 'กรุณารอสักครู่...' });
     try {
       await generateQuotePDF('quote-content', 'insurance-quote');
       toast({ title: 'ดาวน์โหลดสำเร็จ', description: 'ใบเสนอราคาถูกบันทึกแล้ว' });
     } catch (error) {
       toast({ title: 'เกิดข้อผิดพลาด', description: 'ไม่สามารถสร้าง PDF ได้', variant: 'destructive' });
->>>>>>> main
     }
   };
 
@@ -113,25 +78,6 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
       });
     } else {
       navigator.clipboard.writeText(window.location.href);
-<<<<<<< HEAD
-      toast({
-        title: 'คัดลอกลิงก์แล้ว',
-        description: 'สามารถแชร์ลิงก์นี้ได้',
-      });
-    }
-  };
-
-  const totalPlanPremium = selectedPlans.reduce((sum, plan) => sum + (plan.basePremium || 0), 0);
-  const totalCartPremium = cartItems.reduce((sum, item) => sum + (item.premium?.annual || 0), 0);
-  const grandTotal = totalPlanPremium + totalCartPremium;
-
-  return (
-    <div className="space-y-6 px-4 md:px-0">
-      {/* PDF Content */}
-      <div id="quote-content" className="bg-background">
-        <Card className="shadow-xl border-2 border-brand-green/20 overflow-hidden">
-          {/* Header */}
-=======
       toast({ title: 'คัดลอกลิงก์แล้ว', description: 'สามารถแชร์ลิงก์นี้ได้' });
     }
   };
@@ -178,16 +124,11 @@ const discountedTotal = totalPlanPremium + totalCartPremium;
     <div className="space-y-6 px-4 md:px-0">
       <div id="quote-content" className="bg-background">
         <Card className="shadow-xl border-2 border-brand-green/20 overflow-hidden">
->>>>>>> main
           <div className="bg-gradient-to-r from-brand-green via-brand-green to-brand-green-dark p-6 text-white">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm">
-<<<<<<< HEAD
-                  <Building2 className="w-8 h-8 text-brand-green"/>
-=======
                   <Building2 className="w-8 h-8 text-brand-green" />
->>>>>>> main
                 </div>
                 <h2 className="text-2xl font-bold text-brand-green bg-white/90 px-3 py-1 rounded-lg">
                   ANAN IP CO., LTD.
@@ -202,10 +143,6 @@ const discountedTotal = totalPlanPremium + totalCartPremium;
             </div>
           </div>
 
-<<<<<<< HEAD
-          {/* Body */}
-=======
->>>>>>> main
           <CardHeader className="bg-gradient-to-r from-brand-green-light to-brand-gold-light border-b border-brand-green/10">
             <CardTitle className="flex items-center gap-3 text-xl text-brand-green">
               <Calendar className="w-6 h-6" />
@@ -214,10 +151,6 @@ const discountedTotal = totalPlanPremium + totalCartPremium;
           </CardHeader>
 
           <CardContent className="p-6 space-y-6">
-<<<<<<< HEAD
-            {/* ข้อมูลผู้เอาประกัน */}
-=======
->>>>>>> main
             <div className="bg-brand-green/10 p-6 rounded-xl border border-brand-green/20">
               <h4 className="font-bold text-brand-green mb-4 text-lg flex items-center gap-2">
                 <div className="w-1 h-6 bg-brand-green rounded-full"></div>
@@ -240,10 +173,6 @@ const discountedTotal = totalPlanPremium + totalCartPremium;
               </div>
             </div>
 
-<<<<<<< HEAD
-            {/* แพ็กเกจเสริม */}
-=======
->>>>>>> main
             {cartItems.length > 0 && (
               <div className="bg-brand-green/10 p-6 rounded-xl border border-brand-gold/20">
                 <h4 className="font-bold text-brand-green mb-4 text-lg flex items-center gap-2">
@@ -251,29 +180,6 @@ const discountedTotal = totalPlanPremium + totalCartPremium;
                   แพ็กเกจเสริมที่เลือก
                 </h4>
                 <div className="space-y-3">
-<<<<<<< HEAD
-                  {cartItems.map((pkg, index) => (
-                    <div
-                      key={index}
-                      className="bg-brand-green/5 p-4 rounded-lg border border-brand-green/20 shadow-sm text-brand-green hover:shadow-md transition-all"
-                    >
-                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                        <div>
-                          <div className="font-bold text-lg">{pkg.packageName}</div>
-                          <div className="text-sm text-brand-green/70 mt-1">
-                            ช่วงอายุ: {pkg.startAge} - {pkg.endAge} ปี
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-brand-gold font-bold text-lg">
-                            +฿{pkg.premium?.annual?.toLocaleString() || 0}
-                          </div>
-                          <div className="text-sm text-brand-green/60">บาท/ปี</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-=======
                   {cartItems.map((pkg, index) => {
                     const discount = calculateDiscount(pkg, selectedPromotion);
                     const finalPrice = (pkg.premium.finalPremium ?? 0) - discount;
@@ -302,14 +208,10 @@ const discountedTotal = totalPlanPremium + totalCartPremium;
                       </div>
                     );
                   })}
->>>>>>> main
                 </div>
               </div>
             )}
 
-<<<<<<< HEAD
-            {/* เบี้ยประกันรวม */}
-=======
             {/* แสดงส่วนลดรวมและยอดรวมสุทธิ */}
             {selectedPromotion && totalDiscount > 0 && (
               <div className="bg-green-50 p-4 rounded-lg border border-green-300 text-green-800 font-semibold text-center">
@@ -317,49 +219,17 @@ const discountedTotal = totalPlanPremium + totalCartPremium;
               </div>
             )}
 
->>>>>>> main
             <div className="bg-brand-green/5 p-8 rounded-lg border-2 border-brand-green/30 shadow-sm text-center">
               <h4 className="font-bold text-brand-green mb-6 text-xl border-b border-brand-green/20 pb-4">
                 เบี้ยประกันรวมทั้งหมด
               </h4>
               <div className="text-sm text-brand-green/70 mb-2 font-medium">เบี้ยประกันรายปี</div>
-<<<<<<< HEAD
-              <div className="text-4xl font-bold text-brand-green mb-2">
-                ฿{grandTotal.toLocaleString()}
-              </div>
-              <div className="text-sm text-brand-green/60">บาทต่อปี</div>
-            </div>
-
-
-=======
               <div className="text-4xl font-bold text-brand-green mb-2">฿{discountedTotal.toLocaleString()}</div>
               <div className="text-sm text-brand-green/60">บาทต่อปี</div>
             </div>
->>>>>>> main
           </CardContent>
         </Card>
 
-<<<<<<< HEAD
-      {/* ปุ่มดาวน์โหลด / แชร์ */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <Button
-          onClick={generatePDF}
-          className="w-full md:w-1/2 from-brand-green to-brand-green-dark hover:from-brand-green-dark hover:to-brand-green text-white h-14 text-lg font-medium shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-          size="lg"
-        >
-          <Download className="w-5 h-5 mr-2" />
-          ดาวน์โหลด PDF
-        </Button>
-        <Button
-          onClick={shareQuote}
-          variant="outline"
-          className="w-full md:w-1/2 border-2 border-brand-gold text-brand-gold hover:bg-gradient-to-r hover:from-brand-gold hover:to-brand-gold-dark hover:text-white h-14 text-lg font-medium shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-          size="lg"
-        >
-          <Share2 className="w-5 h-5 mr-2" />
-          แชร์ใบเสนอราคา
-        </Button>
-=======
         <div className="flex flex-col md:flex-row gap-4 mt-6">
           <Button
             onClick={generatePDF}
@@ -377,7 +247,6 @@ const discountedTotal = totalPlanPremium + totalCartPremium;
             <Share2 className="w-5 h-5 mr-2" /> แชร์ใบเสนอราคา
           </Button>
         </div>
->>>>>>> main
       </div>
     </div>
   );

@@ -23,11 +23,6 @@ func main() {
 	}
 	db := client.Database(cfg.MongoDBName)
 	database.UserCollection = db.Collection("users")
-<<<<<<< HEAD
-	database.CartCollection = db.Collection("cart") // ⭐ เก็บ collection สำหรับ cart
-
-=======
->>>>>>> main
 	// Gin setup
 	r := gin.Default()
 
@@ -37,11 +32,7 @@ func main() {
 
 	// Cross-origin resource sharing (CORS)
 	r.Use(cors.New(cors.Config{
-<<<<<<< HEAD
-		AllowOrigins:     []string{"http://localhost:8081", "http://192.168.3.58:8081"}, // ใส่ origin ของ frontend
-=======
 		AllowOrigins:     []string{"http://localhost:8081"}, // ใส่ origin ของ frontend
->>>>>>> main
 		AllowMethods:     []string{"GET", "POST", "OPTIONS", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -91,15 +82,6 @@ func main() {
 	})
 	api.GET("/me", authHandler.GetMe)
 
-<<<<<<< HEAD
-	//  เพิ่ม cart handler
-	cartHandler := handlers.NewCartHandler(db)
-	api.GET("/cart", cartHandler.GetCart)
-	api.POST("/cart", cartHandler.AddToCart)
-	api.DELETE("/cart/:id", cartHandler.DeleteFromCart)
-
-=======
 	// Port
->>>>>>> main
 	r.Run(":" + cfg.Port)
 }
