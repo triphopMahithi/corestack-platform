@@ -17,40 +17,51 @@ const PromotionSelector = () => {
   const { selectedPromotion, setSelectedPromotion } = usePromotion();
 
   useEffect(() => {
-    const fetchPromotions = async () => {
-      try {
-        const response = await axios.get('http://localhost:8080/api/promotions');
-        console.log('Fetched promotions:', response.data);
+  const fetchPromotions = async () => {
+    try {
+      const response = await axios.get('http://localhost:8080/api/promotions');
+      if (Array.isArray(response.data)) {
+        const now = new Date();
 
-        if (Array.isArray(response.data)) {
-          const mappedPromos = response.data.map((promo: any) => ({
-            id: promo.ID || promo.id || promo._id || '',
-            name: promo.Name || promo.name || '',
-            description: promo.Description || promo.description || '',
-            type:
-              promo.Type === 'package'
-                ? 'package-specific'
-                : promo.Type === 'general'
-                ? 'general'
-                : promo.Type === 'category'
-                ? 'category'
-                : 'general',
-            discountPercentage: promo.DiscountPercentage || promo.discountPercentage || 0,
-            packageId: promo.PackageId || promo.packageId,
-            categoryId: promo.CategoryId || promo.categoryId,
-          }));
-          setPromotions(mappedPromos);
-        } else {
-          console.error('Expected array but got:', response.data);
-          setPromotions([]);
-        }
-      } catch (error) {
-        console.error('Failed to fetch promotions:', error);
+        const mappedPromos = response.data
+          .map((promo: any) => {
+            const validFrom = new Date(promo.ValidFrom || promo.validFrom);
+            const validTo = new Date(promo.ValidTo || promo.validTo);
+
+            return {
+              id: promo.ID || promo.id || promo._id || '',
+              name: promo.Name || promo.name || '',
+              description: promo.Description || promo.description || '',
+              type:
+                promo.Type === 'package'
+                  ? 'package-specific'
+                  : promo.Type === 'general'
+                  ? 'general'
+                  : promo.Type === 'category'
+                  ? 'category'
+                  : 'general',
+              discountPercentage: promo.DiscountPercentage || promo.discountPercentage || 0,
+              packageId: promo.PackageId || promo.packageId,
+              categoryId: promo.CategoryId || promo.categoryId,
+              validFrom,
+              validTo,
+            };
+          })
+          .filter((promo) => promo.validTo >= now); // ✅ กรองเฉพาะที่ยังไม่หมดอายุ
+
+        setPromotions(mappedPromos);
+      } else {
+        console.error('Expected array but got:', response.data);
         setPromotions([]);
       }
-    };
-    fetchPromotions();
-  }, []);
+    } catch (error) {
+      console.error('Failed to fetch promotions:', error);
+      setPromotions([]);
+    }
+  };
+  fetchPromotions();
+}, []);
+
 
   // ป้องกันกรณี promotions ไม่ใช่ array
   const safePromotions = Array.isArray(promotions) ? promotions : [];
@@ -73,28 +84,26 @@ const PromotionSelector = () => {
         <p className="text-gray-500 italic">ไม่มีโปรโมชั่น</p>
       ) : (
         promos.map((promo) => (
-          <Button
-            key={promo.id}
-            variant={selectedPromotion?.id === promo.id ? 'secondary' : 'outline'}
-            onClick={() => setSelectedPromotion(promo)}
-            className="w-full mb-2 text-left flex justify-between items-center"
-          >
-            <span>
-              {promo.name} - ลด {promo.discountPercentage}%
-            </span>
-            {selectedPromotion?.id === promo.id && (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-green-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={3}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            )}
-          </Button>
+<Button
+  key={promo.id}
+  variant={selectedPromotion?.id === promo.id ? 'secondary' : 'outline'}
+  onClick={() => setSelectedPromotion(promo)}
+  className="w-full mb-2 text-left flex justify-between items-start"
+>
+  {/*ชื่อและส่วนลด*/}
+  <div className="flex flex-col">
+    <span className="font-medium">
+      {promo.name} - ลด {promo.discountPercentage}%
+    </span>
+  </div>
+
+  {/*วันที่*/}
+  <div className="text-xs text-right text-gray-500 whitespace-nowrap ml-4 leading-tight">
+    <div>เริ่ม {promo.validFrom.toLocaleDateString()}</div>
+    <div>ถึง {promo.validTo.toLocaleDateString()}</div>
+  </div>
+</Button>
+
         ))
       )}
     </div>

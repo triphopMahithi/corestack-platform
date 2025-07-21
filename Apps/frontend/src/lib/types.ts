@@ -10,6 +10,8 @@ export interface Promotion {
   discountPercentage: number;
   packageId?: string;
   categoryId?: string;
+  validFrom: Date;
+  validTo: Date;
 }
 
 export interface PremiumResult {

@@ -537,7 +537,7 @@ const discountedTotal = baseTotal - discountAmount;
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label htmlFor="currentAge" className="text-sm">อายุปัจจุบัน (ปี) *</Label>
+                      <Label htmlFor="currentAge" className="text-sm">อายุปัจจุบัน (ปี)</Label>
                       <Input
                         id="currentAge"
                         type="number"
@@ -551,7 +551,7 @@ const discountedTotal = baseTotal - discountAmount;
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="coverageAge" className="text-sm">ความคุ้มครองจนถึงอายุ (ปี) *</Label>
+                      <Label htmlFor="coverageAge" className="text-sm">ความคุ้มครองจนถึงอายุ (ปี)</Label>
                       <Input
                         id="coverageAge"
                         type="number"
@@ -677,19 +677,19 @@ const discountedTotal = baseTotal - discountAmount;
         ))}
 
         <div className="font-semibold border-t pt-2">
-          รวมก่อนส่วนลด: ฿{baseTotal.toLocaleString()}
+          รวมก่อนส่วนลด : ฿ {baseTotal.toLocaleString()}
         </div>
 
         {selectedPromotion && discountAmount > 0 && (
-          <div className="font-semibold border-t pt-2 text-green-600">
-            ส่วนลด ({selectedPromotion.name}): -฿
+          <div className="font-semibold border-t pt-2 text-red-600">
+            ส่วนลด {selectedPromotion.name} : - ฿
             {discountAmount.toLocaleString(undefined, {
               minimumFractionDigits: 0,
             })}
           </div>
         )}
 
-        <div className="font-bold text-lg border-t pt-2">
+        <div className="font-bold text-lg text-brand-green border-t pt-2">
           รวมสุทธิ: ฿{discountedTotal.toLocaleString()}
         </div>
       </>
