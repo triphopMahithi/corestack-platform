@@ -1,13 +1,14 @@
 package handlers
 
 import (
+	"backend/models"
 	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"path/filepath"
-	"reflect"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -86,7 +87,6 @@ func parseExcel(r io.Reader) ([]interface{}, error) {
 	return records, nil
 }
 
-// ===== MAIN UPLOAD =====
 func (h *UploadHandler) HandleUpload(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -122,9 +122,12 @@ func (h *UploadHandler) HandleUpload(c *gin.Context) {
 		return
 	}
 
+	force := c.Query("force") == "true"
 	collection := h.DB.Collection("packages")
+
 	var newItems []interface{}
-	var conflicts []Conflict
+	var conflicts []models.Conflict
+	var updatedCount int
 
 	for _, rec := range records {
 		m, ok := rec.(map[string]interface{})
@@ -143,11 +146,28 @@ func (h *UploadHandler) HandleUpload(c *gin.Context) {
 		if err == mongo.ErrNoDocuments {
 			newItems = append(newItems, m)
 		} else if err == nil {
-			diff := CompareDocuments(existing, m)
-			if len(diff) > 0 {
-				conflicts = append(conflicts, Conflict{Old: existing, New: m})
+			diffs := CompareDocuments(existing, m)
+			if len(diffs) > 0 {
+				if force {
+					_, err := collection.UpdateOne(
+						context.Background(),
+						bson.M{"id": id},
+						bson.M{"$set": m},
+					)
+					if err == nil {
+						updatedCount++
+					}
+				} else {
+					conflicts = append(conflicts, models.Conflict{
+						ID:   id,
+						Diff: CompareDocuments(existing, m),
+						Old:  existing,
+						New:  m,
+					})
+				}
 			}
 		} else {
+			// unexpected db error, skip
 			continue
 		}
 	}
@@ -163,23 +183,25 @@ func (h *UploadHandler) HandleUpload(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message":   "อัปโหลดและบันทึกสำเร็จ",
 		"inserted":  len(newItems),
+		"updated":   updatedCount,
 		"conflicts": conflicts,
 	})
 }
 
-type Conflict struct {
-	Old map[string]interface{} `json:"old"`
-	New map[string]interface{} `json:"new"`
-}
-
-func CompareDocuments(oldDoc, newDoc map[string]interface{}) map[string][2]interface{} {
-	diff := make(map[string][2]interface{})
-	for k, newVal := range newDoc {
-		if oldVal, ok := oldDoc[k]; ok {
-			if !reflect.DeepEqual(oldVal, newVal) {
-				diff[k] = [2]interface{}{oldVal, newVal}
-			}
+func CompareDocuments(oldDoc, newDoc map[string]interface{}) []models.FieldDiff {
+	var diffs []models.FieldDiff
+	for key, newVal := range newDoc {
+		if key == "_id" {
+			continue
+		}
+		oldVal, exists := oldDoc[key]
+		if !exists || fmt.Sprintf("%v", oldVal) != fmt.Sprintf("%v", newVal) {
+			diffs = append(diffs, models.FieldDiff{
+				Field: key,
+				Old:   oldVal,
+				New:   newVal,
+			})
 		}
 	}
-	return diff
+	return diffs
 }
