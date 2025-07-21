@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { config} from '@/config';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Save, Plus, Trash2 , Edit} from 'lucide-react';
+import { Settings, Save, Plus, Trash2 , Edit, Package} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
@@ -39,11 +40,49 @@ interface NewPackage {
 const Admin = () => {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
-  const [packageList, setPackageList] = useState([]); // State to store all packages
+  const [packageList, setPackageList] = useState<NewPackage[]>([]); // State to store all packages
+  const [promotionListState, setPromotionListState] = useState([]); // ข้อมูลโปรโมชั่น
+
+  /**
+ * 
+ *    Page Function
+ */
+  function safeSlice<T>(arr: T[] | null | undefined, start: number, end: number): T[] {
+    if (!Array.isArray(arr)) return [];
+  return arr.slice(start, end);
+}
+
+  // ฟังก์ชันเกี่ยวกับ ขึ้นหน้าใหม่
+  const ItemsPerPage = 5; // จำนวนรายการที่จะแสดงในแต่ละหน้า
+  // current state
+  const [packagePage, setPackagePage] = useState(1);
+  const [promotionPage, setPromotionPage] = useState(1);
+
+  // ฟังก์ชันคำนวณข้อมูลที่จะแสดงในแต่ละหน้า
+  const startIndex = (packagePage - 1) * ItemsPerPage;
+  const currentPackages = safeSlice(packageList, startIndex, startIndex + ItemsPerPage);
+  const currentPromotions = safeSlice(promotionListState, (promotionPage - 1) * ItemsPerPage, promotionPage * ItemsPerPage);
+  
+  // ฟังก์ชันไปหน้าถัดไป
+  const nextPage = () => {
+    if (packagePage < Math.ceil(packageList.length / ItemsPerPage)) {
+      setPackagePage(packagePage + 1);
+      setPromotionPage(promotionPage + 1);
+    }
+  };
+
+  // ฟังก์ชันไปหน้าก่อนหน้า
+  const prevPage = () => {
+    if (packagePage > 1) {
+      setPackagePage(packagePage - 1);
+      setPromotionPage(promotionPage - 1);
+    }
+  };  
+  
   
   const [query, setQuery] = useState('');
   const [packages, setPackages] = useState([]);
-  const [selectedPackage, setSelectedPackage] = useState('');
+  const [selectedPackage, setSelectedPackage] = useState<NewPackage | null>(null);
   const [noResults, setNoResults] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showMoreInfo, setShowMoreInfo] = useState(false); // สำหรับการแสดงข้อมูลเพิ่มเติม
@@ -115,10 +154,12 @@ function getDaysUntilExpiration(validTo: string): number {
 
     if (searchQuery.length >= 1) {
       try {
+        const fullURL = `${config.apiBase}/search?query=${searchQuery}`
         // ส่งคำค้นหาไปที่ backend
-        const response = await axios.get(
-          `http://localhost:8080/api/search?query=${searchQuery}`
-        );
+        /** fullURL 
+         * ex : http://localhost:8080/api/search?query=${searchQuery}
+         */
+        const response = await axios.get(fullURL);
         if (response.data.length === 0) {
           setNoResults(true);
         } else {
@@ -133,7 +174,7 @@ function getDaysUntilExpiration(validTo: string): number {
     }
   };
   const handlePackageSelect = (pkg) => {
-    setSelectedPackage(pkg);
+    setSelectedPackage(pkg); // pkg should be the full package object
     setIsDropdownOpen(false); // ปิด dropdown เมื่อเลือกแล้ว
   };
 
@@ -148,40 +189,6 @@ function getDaysUntilExpiration(validTo: string): number {
     return Math.max(...pricing.map(p => p.ageTo));
   };
 
-  // คำนวณราคาเพศชาย (Male) และเพศหญิง (Female) ตามช่วงอายุ
-  const getPriceByGender = (pricing, gender) => {
-    if (!pricing || pricing.length === 0) return null;
-    const price = pricing.find(p => p.gender === gender);
-    return price ? price[gender] : 0;
-  };
-
-/**
- * 
- *    Page Function
- */
-
-  // ฟังก์ชันเกี่ยวกับ ขึ้นหน้าใหม่
-  const ItemsPerPage = 5; // จำนวนรายการที่จะแสดงในแต่ละหน้า
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // ฟังก์ชันคำนวณข้อมูลที่จะแสดงในแต่ละหน้า
-  const startIndex = (currentPage - 1) * ItemsPerPage;
-  const currentPackages = packageList.slice(startIndex, startIndex + ItemsPerPage);
-
-  // ฟังก์ชันไปหน้าถัดไป
-  const nextPage = () => {
-    if (currentPage < Math.ceil(packageList.length / ItemsPerPage)) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  // ฟังก์ชันไปหน้าก่อนหน้า
-  const prevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };  
-  
 /**
  * 
  *  Package
@@ -193,7 +200,7 @@ function getDaysUntilExpiration(validTo: string): number {
   useEffect(() => {
     const fetchPackages = async () => {
       try {
-        const response = await axios.get('http://localhost:8080/api/packages');
+        const response = await axios.get(config.Packages);
         setPackageList(response.data); // Store the received data in state
         console.log('Package - ', response.data)
         // updated ui
@@ -207,8 +214,30 @@ function getDaysUntilExpiration(validTo: string): number {
     };
 
     fetchPackages();
-  }, []); // Empty dependency array ensures this runs only once when the component mounts
+  }, [toast]); // Add 'toast' to the dependency array to fix the missing dependency warning
 
+
+  //(Promotion) ดึงข้อมูลโปรโมชั่นจาก API เมื่อ component ถูก mount
+useEffect(() => {
+  let isMounted = true;
+
+  const fetchPromotions = async () => {
+    try {
+      const response = await axios.get(config.Promotions);
+      if (isMounted) setPromotionListState(response.data);
+    } catch (error) {
+      if (isMounted) setError("ไม่สามารถดึงข้อมูลโปรโมชั่นได้");
+    } finally {
+      if (isMounted) setLoading(false);
+    }
+  };
+
+  fetchPromotions();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
   const [newPackage, setNewPackage] = useState<NewPackage>({
     id: '',
     name: '',
@@ -300,7 +329,10 @@ const handleSavePackage = () => {
     pricing: newPricingData 
   };
     // ส่งข้อมูลใหม่ไปที่ backend (สมมุติว่าเป็น POST request)
-    axios.post('http://localhost:8080/api/packages', packageToSave)
+    /**
+     * axios.post('http://localhost:8080/api/packages', packageToSave)
+     */
+    axios.post(config.Packages, packageToSave)
     .then((response) => {
     // เมื่อการส่งข้อมูลสำเร็จ
     toast({
@@ -347,100 +379,6 @@ const handlePricingChange = (index: number, field: string, value: string) => {
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
-  const [monthlyPrice, setMonthlyPrice] = useState('');
-  const [annualPrice, setAnnualPrice] = useState('');
-  
-  const [packagePrices, setPackagePrices] = useState<PackagePrice[]>([
-    { packageName: 'AIA Health Happy Kids', baseMonthly: 500, baseAnnual: 5500 },
-    { packageName: 'AIA H&S (new standard)', baseMonthly: 800, baseAnnual: 9000 },
-    { packageName: 'AIA H&S Extra (new standard)', baseMonthly: 1200, baseAnnual: 13500 },
-    { packageName: 'AIA Health Saver', baseMonthly: 600, baseAnnual: 6800 },
-    { packageName: 'AIA Health Happy', baseMonthly: 900, baseAnnual: 10200 },
-    { packageName: 'AIA Infinite Care (new standard)', baseMonthly: 1500, baseAnnual: 17000 },
-    { packageName: 'HB', baseMonthly: 700, baseAnnual: 8000 },
-    { packageName: 'AIA HB Extra', baseMonthly: 1000, baseAnnual: 11500 },
-    { packageName: 'AIA Health Cancer', baseMonthly: 1200, baseAnnual: 13800 },
-    { packageName: 'AIA Care for Cancer', baseMonthly: 1000, baseAnnual: 11500 },
-    { packageName: 'AIA CI Plus', baseMonthly: 1500, baseAnnual: 17500 },
-    { packageName: 'AIA CI Top Up', baseMonthly: 800, baseAnnual: 9200 },
-    { packageName: 'multi pay-ci plus', baseMonthly: 2000, baseAnnual: 23000 },
-    { packageName: 'Lady Care & Lady Care Plus', baseMonthly: 1100, baseAnnual: 12800 },
-    { packageName: 'AIA TPD', baseMonthly: 600, baseAnnual: 7000 },
-    { packageName: 'Accident Coverage', baseMonthly: 400, baseAnnual: 4500 }
-  ]);
-
-  const allPackages = [
-    'AIA Health Happy Kids',
-    'AIA H&S (new standard)',
-    'AIA H&S Extra (new standard)',
-    'AIA Health Saver',
-    'AIA Health Happy',
-    'AIA Infinite Care (new standard)',
-    'HB',
-    'AIA HB Extra',
-    'ผลประโยชน์ Day Case ของสัญญาเพิ่มเติม HB และ AIA HB Extra',
-    'AIA Health Cancer',
-    'AIA Care for Cancer',
-    'AIA CI Plus',
-    'AIA CI Top Up',
-    'multi pay-ci plus',
-    'Lady Care & Lady Care Plus',
-    'AIA TPD',
-    'AIA Multi-Pay CI',
-    'AIA Total Care',
-    'Accident Coverage'
-  ];
-  const handleSavePrice = () => {
-    if (!selectedPackage || !monthlyPrice || !annualPrice) {
-      toast({
-        title: "ข้อมูลไม่ครบถ้วน",
-        description: "กรุณากรอกข้อมูลให้ครบถ้วน",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const existingIndex = packagePrices.findIndex(p => p.packageName === selectedPackage);
-    
-    if (existingIndex > -1) {
-      // Update existing
-      const newPrices = [...packagePrices];
-      newPrices[existingIndex] = {
-        packageName: selectedPackage,
-        baseMonthly: parseInt(monthlyPrice),
-        baseAnnual: parseInt(annualPrice)
-      };
-      setPackagePrices(newPrices);
-    } else {
-      // Add new
-      setPackagePrices([...packagePrices, {
-        packageName: selectedPackage,
-        baseMonthly: parseInt(monthlyPrice),
-        baseAnnual: parseInt(annualPrice)
-      }]);
-    }
-
-    toast({
-      title: "บันทึกสำเร็จ",
-      description: `อัพเดทราคาสำหรับ ${selectedPackage} แล้ว`,
-    });
-
-    setSelectedPackage('');
-    setMonthlyPrice('');
-    setAnnualPrice('');
-  };
-
-  //const handlePackageSelect = (packageName: string) => {
-  //  setSelectedPackage(packageName);
-  //  const existing = packagePrices.find(p => p.packageName === packageName);
-  //  if (existing) {
-  //    setMonthlyPrice(existing.baseMonthly.toString());
-  //    setAnnualPrice(existing.baseAnnual.toString());
-  //  } else {
-  //    setMonthlyPrice('');
-  //    setAnnualPrice('');
-  //  }
-  //};
 
   const handleDeletePackage = async (packageId : string ,packageName: string) => {
     console.log('PackageID - ',packageId)
@@ -472,46 +410,13 @@ const handlePricingChange = (index: number, field: string, value: string) => {
     });
 };
 
-  
-  /**
-   *  Promotion
-   * 
-   */
-  
-
-  const [promotionListState, setPromotionListState] = useState([]); // ข้อมูลโปรโมชั่น
-  const [loading, setLoading] = useState(true); // สถานะการโหลดข้อมูล
-  const [error, setError] = useState(null); // ข้อผิดพลาด
-  const currentPromotions = promotionListState.slice(
-    (currentPage - 1) * ItemsPerPage,
-    currentPage * ItemsPerPage
-  );
-  
-
-  // ดึงข้อมูลโปรโมชั่นจาก API เมื่อ component ถูก mount
-  useEffect(() => {
-    const fetchPromotions = async () => {
-      try {
-        const response = await axios.get('http://localhost:8080/api/promotions');
-        setPromotionListState(response.data); // เก็บข้อมูลที่ได้ใน state
-        console.log("log - interface promotions :",response.data);
-      } catch (error) {
-        setError("ไม่สามารถดึงข้อมูลโปรโมชั่นได้");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPromotions();
-  }, []); // Empty dependency array หมายความว่า useEffect จะทำงานเพียงครั้งเดียวเมื่อ component ถูก mount
-
-
 const handleDeletePromotion = async (promotionId: string, promotionName : string) => {
   console.log("promotionId -",promotionId)
 
   try {
     // ส่งคำขอ DELETE ไปยัง backend
-    const response = await axios.delete(`http://localhost:8080/api/promotions/${promotionId}`);
+    // const response = await axios.delete(`http://localhost:8080/api/promotions/${promotionId}`);
+    const response = await axios.delete(`${config.Promotions}/${promotionId}`);
     console.log("Response from delete:", response);    
     toast({
       title: "ลบโปรโมชั่นสำเร็จ",
@@ -609,8 +514,8 @@ const handleAddPromotion = async () => {
 
   try {
     // ส่งข้อมูลโปรโมชั่นไปยัง backend
-    //await axios.post('http://localhost:8080/api/promotions', promotionData);
-    const response = await axios.post('http://localhost:8080/api/promotions', promotionData);
+    //const response = await axios.post('http://localhost:8080/api/promotions', promotionData);
+    const response = await axios.post(config.Promotions, promotionData);
     // รับข้อมูลโปรโมชั่นที่ถูกสร้างพร้อม _id
     const createdPromotion = response.data.promotion;
 
@@ -852,69 +757,71 @@ const handleDeleteAllPackages = async () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
         <div className="space-y-4">
- <div>
-      {/* ช่องค้นหาสำหรับการพิมพ์ */}
-      <input
-        type="text"
-        value={query}
-        onChange={handleSearch}
-        placeholder="ค้นหาแพ็กเกจ..."
-        onFocus={() => setIsDropdownOpen(true)} // เปิด dropdown เมื่อคลิกช่องค้นหา
-      />
+  <div className="relative w-full max-w-lg">
+  <input
+    type="text"
+    value={query}
+    onChange={handleSearch}
+    placeholder="ค้นหาแพ็กเกจ..."
+    onFocus={() => setIsDropdownOpen(true)}
+    className="w-full px-4 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-brand-green hover:border-transparent transition duration-200"
+  />
 
-      {/* แสดงผลลัพธ์การค้นหาผ่าน div dropdown */}
-      <div className="relative">
-        {isDropdownOpen && (
-          <div className="absolute z-10 w-full bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
-            {noResults ? (
-              <div className="p-2 text-center text-gray-500">ไม่พบข้อมูล</div>
-            ) : (
-              packages.map((pkg) => (
-                <div
-                  key={pkg.id}
-                  className="p-2 cursor-pointer hover:bg-gray-200"
-                  onClick={() => handlePackageSelect(pkg)} // เมื่อเลือกแพ็กเกจ
-                >
-                  {pkg.name}
-                </div>
-              ))
-            )}
-          </div>
-        )}
-      </div>
+  {isDropdownOpen && (
+  <div className="absolute top-full mt-1 w-full bg-white border border-gray-200 rounded-2xl shadow-lg z-10">
+    {packages.length > 0 ? (
+      packages.map((pkg, index) => (
+        <div
+          key={index}
+          className="px-4 py-2 hover:bg-gray-100 cursor-pointer rounded-2xl"
+          onClick={() => handleSelect(pkg)}
+        >
+          {pkg.name}
+        </div>
+      ))
+    ) : query.length > 0 ? (
+      <div className="px-4 py-2 text-gray-400">ไม่พบผลลัพธ์</div>
+    ) : null}
+  </div>
+)}
 
-      {/* แสดงข้อมูลของแพ็กเกจที่เลือก */}
-      {selectedPackage && (
-        <div className="mt-4">
-          <h3 className="text-xl font-semibold">ข้อมูลแพ็กเกจ</h3>
-          <p><strong>ชื่อแพ็กเกจ:</strong> {selectedPackage.name}</p>
+</div>
+<div>
+  {selectedPackage && typeof selectedPackage === 'object' && (
+  <div className="mt-6 p-6 bg-white rounded-xl shadow-md space-y-4">
+    <h3 className="text-2xl font-bold text-brand-green">ข้อมูลแพ็กเกจ</h3>
+    <p className="text-gray-800">
+      <span className="font-medium">ชื่อแพ็กเกจ:</span> {selectedPackage.name}
+    </p>
 
-          {/* แสดง AgeFrom และ AgeTo ที่น้อยที่สุดและมากที่สุดจาก pricing */}
-          <div>
-            {selectedPackage.pricing && selectedPackage.pricing.length > 0 ? (
-              <p>
-                อายุที่น้อยที่สุด: {getMinAge(selectedPackage.pricing)} <br />
-                อายุที่มากที่สุด: {getMaxAge(selectedPackage.pricing)}
-              </p>
-            ) : (
-              <p>ไม่มีข้อมูลช่วงอายุ</p>
-            )}
-          </div>
-          {/* ปุ่มแสดงข้อมูลเพิ่มเติม */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowMoreInfo(!showMoreInfo)} // Toggle การแสดงข้อมูลเพิ่มเติม
-            className="mt-4"
-          >
-            {showMoreInfo ? "ซ่อนข้อมูลเพิ่มเติม" : "แสดงข้อมูลเพิ่มเติม"}
-          </Button>
+    <div className="text-gray-700">
+      {selectedPackage.pricing && selectedPackage.pricing.length > 0 ? (
+        <>
+          <p>
+            <span className="font-medium">อายุที่น้อยที่สุด:</span> {getMinAge(selectedPackage.pricing)} ปี
+          </p>
+          <p>
+            <span className="font-medium">อายุที่มากที่สุด:</span> {getMaxAge(selectedPackage.pricing)} ปี
+          </p>
+        </>
+      ) : (
+        <p className="text-sm text-gray-500">ไม่มีข้อมูลช่วงอายุ</p>
+      )}
+    </div>
 
-          {/* แสดงข้อมูลเพิ่มเติมเมื่อคลิก */}
-{showMoreInfo && (
-  <div className="mt-4">
-    <p><strong>หมวดหมู่:</strong> {selectedPackage.categoryId}</p>
-    <p><strong>ข้อจำกัดเพศ:</strong> {selectedPackage.genderRestriction}</p>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => setShowMoreInfo(!showMoreInfo)}
+      className="mt-2"
+    >
+      {showMoreInfo ? "ซ่อนข้อมูลเพิ่มเติม" : "แสดงข้อมูลเพิ่มเติม"}
+    </Button>
+
+    {showMoreInfo && (
+      <div className="mt-4 space-y-2 text-gray-800">
+        <p><span className="font-medium">หมวดหมู่:</span> {selectedPackage.categoryId}</p>
+        <p><span className="font-medium">ข้อจำกัดเพศ:</span> {selectedPackage.genderRestriction}</p>
 
         <p className="font-semibold mt-4">ช่วงอายุและราคา:</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1032,7 +939,12 @@ const handleDeleteAllPackages = async () => {
                   </CardHeader>
 <CardContent>
       <div className="space-y-2">
-        {currentPackages.map((pkg) => (
+        {currentPackages.length === 0 ? (
+      <div className="text-center text-gray-500 py-6">
+        ไม่พบแพ็คเกจในระบบ
+      </div>) : (
+        
+        currentPackages.map((pkg) => (
           <div key={pkg.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div>
               <h4 className="font-medium">{pkg.name}</h4> {/* ใช้ pkg.name สำหรับแสดงชื่อแพ็คเกจ */}
@@ -1066,16 +978,21 @@ const handleDeleteAllPackages = async () => {
    */}
 </div>
           </div>
-        ))}
+          )
+        )
+      )}
       </div>
 
       {/* แสดงปุ่มเปลี่ยนหน้า */}
       <div className="flex justify-between mt-4">
-        <Button onClick={prevPage} disabled={currentPage === 1}>
+        <Button onClick={prevPage} disabled={packagePage === 1}>
           ก่อนหน้า
         </Button>
-        <Button onClick={nextPage} disabled={currentPage >= Math.ceil(packageList.length / ItemsPerPage)}>
-          ถัดไป
+        <Button
+        onClick={nextPage}
+        disabled={packagePage >= Math.ceil((packageList || []).length / ItemsPerPage)}
+        >
+        ถัดไป
         </Button>
       </div>
     </CardContent>
@@ -1090,18 +1007,6 @@ const handleDeleteAllPackages = async () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* ฟอร์มสำหรับกรอกข้อมูลแพ็คเกจ */}
-            {/** 
-            <div className="space-y-2">
-              <Label htmlFor="packageId">ID แพ็คเกจ</Label>
-              <Input
-                id="packageId"
-                value={newPackage.id}
-                onChange={(e) => setNewPackage({ ...newPackage, id: e.target.value })}
-                placeholder="กรอก ID แพ็คเกจ"
-              />
-            </div>
-            */}
             <div className="space-y-2">
               <Label htmlFor="packageName">ชื่อแพ็คเกจ</Label>
               <Input
@@ -1244,108 +1149,116 @@ const handleDeleteAllPackages = async () => {
                     <CardTitle>ตั้งค่าระบบ</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-      <h4 className="font-medium">เพิ่มโปรโมชั่น</h4>
-      {/* ตัวเลือกประเภทโปรโมชั่น */}
-      <div>
-        <label>ประเภทโปรโมชั่น</label>
-        <div className="space-x-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPromotionType('general')}
-            className={promotionType === 'general' ? 'bg-blue-500 text-white' : ''}
-          >
-            โปรโมชั่นทั่วไป
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPromotionType('package')}
-            className={promotionType === 'package' ? 'bg-blue-500 text-white' : ''}
-          >
-            โปรโมชั่นเฉพาะแพ็คเกจ
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPromotionType('category')}
-            className={promotionType === 'category' ? 'bg-blue-500 text-white' : ''}
-          >
-            โปรโมชั่นเฉพาะสัญญา
-          </Button>
-        </div>
-      </div>
+<div className="max-w-xl mx-auto space-y-4 bg-white p-6 rounded-2xl shadow-md border border-gray-200">
+  <h2 className="text-xl font-semibold text-gray-700">เพิ่มโปรโมชั่นใหม่</h2>
 
-      {/* ฟอร์มกรอกชื่อโปรโมชั่นและรายละเอียด */}
-      <input
-        type="text"
-        placeholder="ชื่อโปรโมชั่น"
-        value={promotionName}
-        onChange={(e) => setPromotionName(e.target.value)}
-        className="input"
-      />
-      <textarea
-        placeholder="รายละเอียดโปรโมชั่น"
-        value={promotionDescription}
-        onChange={(e) => setPromotionDescription(e.target.value)}
-        className="textarea"
-      />
-      <input
-        type="number"
-        placeholder="เปอร์เซ็นต์ส่วนลด"
-        value={discountPercentage}
-        onChange={(e) => setDiscountPercentage(e.target.value)}
-        className="input"
-      />
+  {/* ฟอร์มกรอกชื่อโปรโมชั่นและรายละเอียด */}
+  <div className="space-y-2">
+    <label className="block text-sm font-medium text-gray-600">ชื่อโปรโมชั่น</label>
+    <input
+      type="text"
+      placeholder="กรอกชื่อโปรโมชั่น"
+      value={promotionName}
+      onChange={(e) => setPromotionName(e.target.value)}
+      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
+    />
+  </div>
+
+  <div className="space-y-2">
+    <label className="block text-sm font-medium text-gray-600">รายละเอียดโปรโมชั่น</label>
+    <textarea
+      placeholder="กรอกรายละเอียด"
+      value={promotionDescription}
+      onChange={(e) => setPromotionDescription(e.target.value)}
+      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
+    />
+  </div>
+
+  <div className="space-y-2">
+    <label className="block text-sm font-medium text-gray-600">เปอร์เซ็นต์ส่วนลด (%)</label>
+    <input
+      type="number"
+      placeholder="เช่น 10"
+      value={discountPercentage}
+      onChange={(e) => setDiscountPercentage(e.target.value)}
+      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
+    />
+  </div>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-600">วันที่เริ่มต้น</label>
       <input
         type="date"
-        placeholder="วันที่เริ่มต้น"
         value={validFrom}
         onChange={(e) => setValidFrom(e.target.value)}
-        className="input"
+        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
       />
+    </div>
+
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-600">วันที่สิ้นสุด</label>
       <input
         type="date"
-        placeholder="วันที่สิ้นสุด"
         value={validTo}
         onChange={(e) => setValidTo(e.target.value)}
-        className="input"
+        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
       />
-
-      {/* เงื่อนไขสำหรับ "โปรโมชั่นเฉพาะแพ็คเกจ" */}
-      {promotionType === 'package' && (
-        <div className="space-y-2">
-          <label>กรุณากรอกชื่อแพ็คเกจที่โปรโมชั่นใช้ได้</label>
-          <input
-            type="text"
-            placeholder="ชื่อแพ็คเกจ"
-            value={packageId}
-            onChange={(e) => setPackageId(e.target.value)}
-            className="input"
-          />
-        </div>
-      )}
-
-      {/* เงื่อนไขสำหรับ "โปรโมชั่นเฉพาะ categoryId" */}
-      {promotionType === 'category' && (
-        <div className="space-y-2">
-          <label>กรุณากรอกสัญญาที่โปรโมชั่นใช้ได้</label>
-          <input
-            type="text"
-            placeholder="ชื่อสัญญา"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="input"
-          />
-        </div>
-      )}
-
-      {/* ปุ่มเพิ่มโปรโมชั่น */}
-      <Button onClick={handleAddPromotion} className="btn btn-primary">
-        เพิ่มโปรโมชั่น
-      </Button>
     </div>
+  </div>
+  <div className="space-y-2">
+  <label className="block text-sm font-medium text-gray-600">ประเภทโปรโมชั่น</label>
+  <select
+    value={promotionType}
+    onChange={(e) => setPromotionType(e.target.value)}
+    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
+  >
+    <option value="">-- กรุณาเลือกประเภท --</option>
+    <option value="package">โปรโมชั่นเฉพาะแพ็คเกจ</option>
+    <option value="category">โปรโมชั่นเฉพาะกลุ่มสัญญา</option>
+    <option value="general">โปรโมชั่นทั่วไป (ใช้ได้กับทุกแพ็คเกจ)</option>
+  </select>
+</div>
+
+  {/* เงื่อนไขสำหรับ "โปรโมชั่นเฉพาะแพ็คเกจ" */}
+  {promotionType === 'package' && (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-600">ชื่อแพ็คเกจที่ใช้โปรโมชั่นได้</label>
+      <input
+        type="text"
+        placeholder="กรอกชื่อแพ็คเกจ"
+        value={packageId}
+        onChange={(e) => setPackageId(e.target.value)}
+        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
+      />
+    </div>
+  )}
+
+  {/* เงื่อนไขสำหรับ "โปรโมชั่นเฉพาะ categoryId" */}
+  {promotionType === 'category' && (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-600">ชื่อสัญญาที่ใช้โปรโมชั่นได้</label>
+      <input
+        type="text"
+        placeholder="กรอกชื่อสัญญา"
+        value={categoryId}
+        onChange={(e) => setCategoryId(e.target.value)}
+        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-green"
+      />
+    </div>
+  )}
+
+  {/* ปุ่มเพิ่มโปรโมชั่น */}
+  <div className="pt-4">
+<Button
+  onClick={handleAddPromotion}
+  className="w-full bg-brand-green text-black hover:bg-brand-green/90 rounded-xl py-3 text-base font-semibold shadow-md transition duration-200"
+>
+  เพิ่มโปรโมชั่น
+</Button>
+  </div>
+</div>
+
                   </CardContent>
 
 
@@ -1434,19 +1347,21 @@ const handleDeleteAllPackages = async () => {
     )}
   </div>
 
-      {/* แสดงปุ่มเปลี่ยนหน้า */}
-      <div className="flex justify-between mt-4">
-        <Button onClick={prevPage} disabled={currentPage === 1}>
-          ก่อนหน้า
-        </Button>
-        <Button
-          onClick={nextPage}
-          disabled={currentPage >= Math.ceil(promotionListState.length / ItemsPerPage)}
-        >
-          ถัดไป
-        </Button>
-      </div>
-    </CardContent>
+  {/* ปุ่มเปลี่ยนหน้า */}
+  {Array.isArray(promotionListState) && promotionListState.length > ItemsPerPage && (
+    <div className="flex justify-between mt-6">
+      <Button onClick={prevPage} disabled={promotionPage === 1}>
+        ก่อนหน้า
+      </Button>
+      <Button
+        onClick={nextPage}
+        disabled={promotionPage >= Math.ceil(promotionListState.length / ItemsPerPage)}
+      >
+        ถัดไป
+      </Button>
+    </div>
+  )}
+</CardContent>
 
 
 
