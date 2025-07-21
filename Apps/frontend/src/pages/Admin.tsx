@@ -13,13 +13,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import axios from 'axios';
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
-import { ConflictDialog } from "@/components/ConflictDialog";
+import { UploadWithConflictDialog } from "@/components/UploadWithConflictDialog";
+import ConfirmDeleteAll from "@/components/ConfirmDeleteAll";
 
-interface PackagePrice {
-  packageName: string;
-  baseMonthly: number;
-  baseAnnual: number;
-}
 
 interface Pricing {
   ageFrom: number;
@@ -90,21 +86,25 @@ const Admin = () => {
   const [noResults, setNoResults] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showMoreInfo, setShowMoreInfo] = useState(false); // สำหรับการแสดงข้อมูลเพิ่มเติม
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
     /**
    *  Promotion
    * 
    */
-  function getDaysUntilExpiration(validTo: string): number {
-    const today = new Date();
-    const expiredDate = new Date(validTo + "T23:59:59");
+function getDaysUntilExpiration(validTo: string): number {
+  const today = new Date();
+  const endDate = new Date(validTo);
 
-    // ล้างเวลาของ today
-    today.setHours(0, 0, 0, 0);
+  // เคลียร์เวลาให้เป็น 00:00:00 ทั้งสองฝั่งเพื่อให้แม่นยำเฉพาะวัน
+  today.setHours(0, 0, 0, 0);
+  endDate.setHours(0, 0, 0, 0);
 
-    const msInDay = 1000 * 60 * 60 * 24;
-    return Math.ceil((expiredDate.getTime() - today.getTime()) / msInDay);
+  const diffTime = endDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
 }
+
 
   // Upload file
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -112,7 +112,6 @@ const Admin = () => {
   const [error, setError] = useState(null); // ข้อผิดพลาด
   const [conflicts, setConflicts] = useState([]); // เก็บความต่าง
   const [showConflictPopup, setShowConflictPopup] = useState(false);
-  const [showDialog, setShowDialog] = useState(false);
 
   const [promotionType, setPromotionType] = useState('general');  // default type
   const [promotionName, setPromotionName] = useState('');
@@ -122,15 +121,25 @@ const Admin = () => {
   const [validTo, setValidTo] = useState('');
   const [packageId, setPackageId] = useState('');
   const [categoryId, setCategoryId] = useState('');
-
+  const [editPromotionId, setEditPromotionId] = useState<string | null>(null);
+  const [editPromotion, setEditPromotion] = useState({
+  name: "",
+  description: "",
+  type: "",
+  discountPercentage: 0,
+  validFrom: "",
+  validTo: "",
+});
   // edit price
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editPrice, setEditPrice] = useState({
-  ageFrom: '',
-  ageTo: '',
-  male: '',
-  female: '',
-  });
+  ageFrom: "",
+  ageTo: "",
+  male: "",
+  female: "",
+  packageName: "",
+  categoryId: ""
+});
 
   /** 
    *  
@@ -423,9 +432,41 @@ const handleDeletePromotion = async (promotionId: string, promotionName : string
   }
 };
 
-const handleEditPromotion = (promotionId: string) => {
-  console.log("Editing promotion with ID:", promotionId);
-  // เพิ่มการจัดการการแก้ไขข้อมูลที่นี่ เช่น การแสดงฟอร์มแก้ไข
+interface Promotion {
+  _id: string;
+  name: string;
+  description: string;
+  type: string;
+  discountPercentage: number;
+  validFrom?: string;
+  validTo?: string;
+}
+
+const handleEditPromotion = (promotion: Promotion) => {
+  console.log("Editing:", promotion);
+  setEditPromotionId(promotion._id);
+  setEditPromotion({
+    name: promotion.name || "",
+    description: promotion.description || "",
+    type: promotion.type || "",
+    discountPercentage: promotion.discountPercentage || 0,
+    validFrom: promotion.validFrom
+      ? new Date(promotion.validFrom).toISOString().slice(0, 10)
+      : "",
+    validTo: promotion.validTo
+      ? new Date(promotion.validTo).toISOString().slice(0, 10)
+      : "",
+  });
+};
+
+const handleSavePromotion = () => {
+  // ส่ง editPromotion และ editPromotionId ไป backend
+  console.log("Saving Promotion ID:", editPromotionId, editPromotion);
+
+  // TODO: API call หรืออัปเดต state
+
+  // รีเซต
+  setEditPromotionId(null);
 };
 
 const handleAddPromotion = async () => {
@@ -508,6 +549,17 @@ const handleSelect = (pkg) => {
 
 
 // show-info option 
+//const handleEditPricing = (index: number) => {
+//  const p = selectedPackage.pricing[index];
+//  setEditIndex(index);
+//  setEditPrice({
+//    ageFrom: p.ageFrom.toString(),
+//    ageTo: p.ageTo.toString(),
+//    male: p.male.toString(),
+//    female: p.female.toString(),
+//  });
+//};
+
 const handleEditPricing = (index: number) => {
   const p = selectedPackage.pricing[index];
   setEditIndex(index);
@@ -516,8 +568,11 @@ const handleEditPricing = (index: number) => {
     ageTo: p.ageTo.toString(),
     male: p.male.toString(),
     female: p.female.toString(),
+    packageName: selectedPackage.name || "",     // ✅ เปลี่ยนจาก packageName เป็น name
+    categoryId: selectedPackage.categoryId || ""        // ✅ เพิ่ม
   });
 };
+
 
 // check minAge and maxAge
 const checkAndUpdateMinMax = async (pricing: Pricing[]) => {
@@ -544,24 +599,31 @@ const checkAndUpdateMinMax = async (pricing: Pricing[]) => {
   }
 };
 
-const updatePricingInDB = async (updatedPricing: Pricing, index: number) => {
+const updatePricingInDB = async (
+  updatedPricing: Pricing & { name: string; categoryId: string },
+  index: number
+) => {
   try {
-    // 1. Clone pricing array แล้วอัปเดต index
     const updated = [...selectedPackage.pricing];
     updated[index] = updatedPricing;
 
-    // 2. PATCH เฉพาะ pricing[index]
-    const pricingURL = `${config.Packages}/${selectedPackage.id}/pricing/${index}`
+    const pricingURL = `${config.Packages}/${selectedPackage.id}/pricing/${index}`;
+
+    const payload = {
+      pricing: updatedPricing,
+      name: updatedPricing.name,           // ✅ ใช้ name แทน packageName
+      categoryId: updatedPricing.categoryId
+    };
+
     const response = await fetch(pricingURL, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedPricing),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) throw new Error("Update failed");
 
-    // 3. ตรวจสอบ minAge/maxAge
-    await checkAndUpdateMinMax(updated); // <--- เรียกฟังก์ชันแยก
+    await checkAndUpdateMinMax(updated);
 
     toast({ title: "สำเร็จ", description: "อัปเดตราคาเรียบร้อยแล้ว" });
   } catch (error) {
@@ -578,20 +640,52 @@ const handleSavePricing = async (index: number) => {
     female: parseFloat(editPrice.female),
   };
 
-  // 1. อัปเดตใน UI
-  const updated = [...selectedPackage.pricing];
-  updated[index] = newData;
-  setSelectedPackage({ ...selectedPackage, pricing: updated });
+  // ✅ 1. อัปเดต pricing ใน UI
+  const updatedPricing = [...selectedPackage.pricing];
+  updatedPricing[index] = newData;
 
-  // 2. อัปเดต backend
-  await updatePricingInDB(newData, index);
+  // ✅ 2. อัปเดตทั้ง pricing, name, categoryId
+  const updatedPackage = {
+    ...selectedPackage,
+    pricing: updatedPricing,
+    name: editPrice.packageName,
+    categoryId: editPrice.categoryId,
+  };
 
-  // 3. ตรวจสอบ min/max
-  await checkAndUpdateMinMax(updated);
+  setSelectedPackage(updatedPackage);
+
+  // ✅ 3. อัปเดต backend
+  await updatePricingInDB(
+    {
+      ...newData,
+      name: editPrice.packageName,
+      categoryId: editPrice.categoryId,
+    },
+    index
+  );
+
+  // ✅ 4. ตรวจสอบ min/max
+  await checkAndUpdateMinMax(updatedPricing);
 
   setEditIndex(null);
 };
 
+const handleDeleteAllPackages = async () => {
+  try {
+    const response = await fetch(`${config.Packages}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) throw new Error("ลบไม่สำเร็จ");
+
+    // เคลียร์ state หรือโหลดใหม่
+    setSelectedPackage(null);
+    toast({ title: "สำเร็จ", description: "ลบข้อมูลทั้งหมดแล้ว" });
+  } catch (err) {
+    console.error(err);
+    toast({ title: "ผิดพลาด", description: "ไม่สามารถลบข้อมูลทั้งหมดได้", variant: "destructive" });
+  }
+};
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -759,6 +853,21 @@ const handleSavePricing = async (index: number) => {
   <div className="mt-4 p-4 border rounded bg-gray-100 space-y-2">
     <h4 className="text-lg font-semibold text-brand-green">แก้ไขช่วงอายุและราคา</h4>
     <div className="grid grid-cols-2 gap-4">
+      {/* ✅ ช่องแก้ไขชื่อแพ็กเกจ */}
+      <Input
+        type="text"
+        value={editPrice.packageName}
+        onChange={(e) => setEditPrice({ ...editPrice, packageName: e.target.value })}
+        placeholder="ชื่อแพ็กเกจ"
+      />
+
+      {/* ✅ ช่องแก้ไขหมวดหมู่ */}
+      <Input
+        type="text"
+        value={editPrice.categoryId}
+        onChange={(e) => setEditPrice({ ...editPrice, categoryId: e.target.value })}
+        placeholder="หมวดหมู่"
+      />
       <Input
         type="number"
         value={editPrice.ageFrom}
@@ -787,11 +896,7 @@ const handleSavePricing = async (index: number) => {
 
     <div className="flex justify-end space-x-2 mt-4">
       <Button variant="ghost" onClick={() => setEditIndex(null)}>ยกเลิก</Button>
-      <Button
-        onClick={() => handleSavePricing(editIndex)}
-      >
-        บันทึก
-      </Button>
+      <Button onClick={() => handleSavePricing(editIndex)}>บันทึก</Button>
     </div>
   </div>
 )}
@@ -816,6 +921,21 @@ const handleSavePricing = async (index: number) => {
                 <Card>
                   <CardHeader>
                     <CardTitle>รายการราคาปัจจุบัน</CardTitle>
+<div className="relative space-y-2">
+  <span
+    onClick={() => setShowConfirmDelete(true)}
+    className="absolute top-0 right-0 text-sm text-red-500 hover:underline cursor-pointer"
+  >
+    ลบทั้งหมด
+  </span>
+
+  {/* ฟอร์มอื่น ๆ */}
+
+  {showConfirmDelete && (
+    <ConfirmDeleteAll onCancel={() => setShowConfirmDelete(false)} />
+  )}
+</div>
+
                   </CardHeader>
 <CardContent>
       <div className="space-y-2">
@@ -847,6 +967,7 @@ const handleSavePricing = async (index: number) => {
   />
 
   {/* ปุ่มแก้ไขแบบข้อความ */}
+    {/**
   <span
     onClick={() => handleEditPackage(pkg.id, pkg.name)}
     className="text-sm text-blue-600 hover:text-white hover:bg-blue-600 px-2 py-1 rounded cursor-pointer transition flex items-center space-x-1"
@@ -854,6 +975,7 @@ const handleSavePricing = async (index: number) => {
     <Edit className="w-4 h-4" />
     <span>แก้ไข</span>
   </span>
+   */}
 </div>
           </div>
           )
@@ -956,27 +1078,11 @@ const handleSavePricing = async (index: number) => {
 <div className="flex justify-end mt-4">
   <div className="space-y-2">
     <div className="flex items-center gap-4">
-      <label
-        htmlFor="fileUpload"
-        className="cursor-pointer bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded shadow-sm hover:bg-gray-100 transition"
-      >
-        เลือกไฟล์
-      </label>
-      <input
-        id="fileUpload"
-        type="file"
-        accept=".csv,.json,.xlsx"
-        onChange={handleFileChange}
-        className="hidden"
-      />
 <>
-  <button
-    onClick={handleUpload}
-    className="px-6 py-2 rounded shadow text-white transition"
-    style={{ backgroundColor: "#496650" }}
-  >
-    อัปโหลด
-  </button>
+  <div className="p-6">
+      <h1 className="text-xl font-bold mb-4">อัปโหลดไฟล์ข้อมูล Package</h1>
+      <UploadWithConflictDialog />
+    </div>
 
 </>
     </div>
@@ -1190,6 +1296,18 @@ const handleSavePricing = async (index: number) => {
                 );
               })()}
             </p>
+            <p className="text-sm text-gray-600">ชนิด: {promotion.Type}</p>
+            {promotion.Type === 'package' && (
+              <p className="text-sm text-gray-600">
+                ชื่อแพ็กเกจที่รองรับ: {promotion.PackageID || "(ไม่พบข้อมูลหมวดหมู่)"}
+              </p>
+            )}
+            {promotion.Type === 'category' && (
+              <p className="text-sm text-gray-600">
+                หมวดหมู่ที่รองรับ: {promotion.CategoryID || "(ไม่พบข้อมูลหมวดหมู่)"}
+              </p>
+            )}
+
             <p className="text-sm text-gray-600">คำอธิบาย: {promotion.Description}</p>
             <p className="text-sm text-gray-600">ส่วนลด: {promotion.DiscountPercentage}%</p>
             <p className="text-sm text-gray-600">
@@ -1211,15 +1329,18 @@ const handleSavePricing = async (index: number) => {
       </span>
     }
   />
+{/** 
 
   <span
-    onClick={() => handleEditPromotion(promotion.ID)}
+    onClick={() => handleEditPromotion(promotion)}
     className="flex items-center gap-1 text-sm text-blue-600 hover:text-white hover:bg-blue-600 px-2 py-1 rounded cursor-pointer transition"
   >
     <Edit className="w-4 h-4" />
     แก้ไข
   </span>
+  */}
 </div>
+
 
         </div>
       ))
