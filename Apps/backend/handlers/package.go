@@ -83,8 +83,14 @@ func UpdatePricingHandler(db *mongo.Database) gin.HandlerFunc {
 			return
 		}
 
-		var input models.Pricing
-		if err := c.ShouldBindJSON(&input); err != nil {
+		// รับ payload จาก frontend
+		var req struct {
+			Pricing    models.Pricing `json:"pricing"`
+			Name       string         `json:"name"`
+			CategoryID string         `json:"categoryId"`
+		}
+
+		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -97,7 +103,7 @@ func UpdatePricingHandler(db *mongo.Database) gin.HandlerFunc {
 
 		collection := db.Collection("packages")
 
-		// ดึง document ปัจจุบัน
+		// ดึง package เพื่อตรวจสอบความยาว pricing
 		var pkg models.Package
 		err = collection.FindOne(context.TODO(), bson.M{"_id": objID}).Decode(&pkg)
 		if err != nil {
@@ -110,11 +116,15 @@ func UpdatePricingHandler(db *mongo.Database) gin.HandlerFunc {
 			return
 		}
 
-		// แก้ไขข้อมูล pricing ที่ตำแหน่ง index
-		pkg.Pricing[index] = input
+		// อัปเดตเฉพาะ pricing[index], packageName, categoryId
+		update := bson.M{
+			"$set": bson.M{
+				"pricing." + strconv.Itoa(index): req.Pricing,
+				"name":                           req.Name,
+				"categoryId":                     req.CategoryID,
+			},
+		}
 
-		// บันทึกกลับเข้า DB
-		update := bson.M{"$set": bson.M{"pricing": pkg.Pricing}}
 		_, err = collection.UpdateByID(context.TODO(), objID, update)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update package"})
@@ -122,8 +132,10 @@ func UpdatePricingHandler(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"message": "pricing updated successfully",
-			"pricing": input,
+			"message":    "updated successfully",
+			"pricing":    req.Pricing,
+			"name":       req.Name,
+			"categoryId": req.CategoryID,
 		})
 	}
 }
@@ -227,6 +239,25 @@ func DeletePackageHandler(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "Package deleted successfully"})
+	}
+}
+
+func DeleteAllPackagesHandler(db *mongo.Database) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		collection := db.Collection("packages")
+
+		// ลบเอกสารทั้งหมดใน collection
+		_, err := collection.DeleteMany(context.TODO(), bson.M{})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "ลบข้อมูลทั้งหมดไม่สำเร็จ",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "ลบข้อมูลทั้งหมดใน collection เรียบร้อยแล้ว",
+		})
 	}
 }
 
