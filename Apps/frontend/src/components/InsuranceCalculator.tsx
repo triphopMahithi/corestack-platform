@@ -676,22 +676,29 @@ const discountedTotal = baseTotal - discountAmount;
           </div>
         ))}
 
-        <div className="font-semibold border-t pt-2">
-          รวมก่อนส่วนลด : ฿ {baseTotal.toLocaleString()}
-        </div>
+<div className="flex justify-between border-t pt-2 font-semibold">
+  <span className="w-40 text-right">รวมก่อนส่วนลด  :</span>
+  <span>฿ {baseTotal.toLocaleString()}</span>
+</div>
 
-        {selectedPromotion && discountAmount > 0 && (
-          <div className="font-semibold border-t pt-2 text-red-600">
-            ส่วนลด {selectedPromotion.name} : - ฿
-            {discountAmount.toLocaleString(undefined, {
-              minimumFractionDigits: 0,
-            })}
-          </div>
-        )}
+{selectedPromotion && discountAmount > 0 && (
+  <div className="flex justify-between border-t pt-2 font-semibold text-red-600">
+    <span className="w-40 text-right">
+      ส่วนลด {selectedPromotion.name}  :
+    </span>
+    <span>
+     -฿
+       {discountAmount.toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+      })}
+    </span>
+  </div>
+)}
 
-        <div className="font-bold text-lg text-brand-green border-t pt-2">
-          รวมสุทธิ: ฿{discountedTotal.toLocaleString()}
-        </div>
+<div className="flex justify-between border-t pt-2 font-bold text-lg text-brand-green">
+  <span className="w-40 text-right">รวมสุทธิ :</span>
+  <span>฿ {discountedTotal.toLocaleString()}</span>
+</div>
       </>
     ) : (
       <p className="text-sm text-gray-500">ยังไม่มีรายการในตะกร้า</p>
