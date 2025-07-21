@@ -63,6 +63,7 @@ func main() {
 	api.POST("/packages/add-pricing", handlers.AddPricingToPackageHandler(db))
 	api.POST("/packages/delete-pricing", handlers.DeletePricingFromPackageHandler(db))
 	api.DELETE("/packages/:id", handlers.DeleteOnePackage(db))
+	api.DELETE("/packages", handlers.DeleteAllPackagesHandler(db))
 
 	// Promotion
 	r.GET("/api/promotions", handlers.GetPromotionsHandler(db))
