@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Calculator, RotateCcw, Package, Shield, Search, Save, CheckCircle, ChevronDown, Minus, Plus, Eye, Filter, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import QuoteResult from './QuoteResult';
+import QuoteResult from '@/components/QuoteResult';
 import Step1 from '@/components/steps/Step1';
 import Step2 from '@/components/steps/Step2';
 import Step3 from '@/components/steps/Step3';
@@ -14,7 +14,10 @@ import { createFormStepHandlers } from '@/utils/formStepHandlers';
 import { calculateTieredPremium, getPricingTiersFromPackage } from '@/utils/premiumCalculator';
 import { parseCoverageFromText } from '@/utils/ParserHandler';
 import { useAuth } from '../contexts/AuthContext';
-import { config } from '@/config';
+import { PromotionProvider, usePromotion } from '@/contexts/PromotionContext';
+import PromotionSelectorDialog from '@/components/PromotionSelector';
+import { Promotion, CouponType,PremiumResult } from '@/lib/types';
+
 interface CalculatorData {
   gender: string;
   currentAge: string;
@@ -27,25 +30,47 @@ interface CalculatorData {
 interface StepData {
   selectedPackage: string;
   selectedPlan: string;
-  searchResults: unknown;
-  savedData: unknown;
+  searchResults: any;
+  savedData: any;
 }
 
-interface PackageObject {
-  name: string;
-  [key: string]: unknown;
+interface NewCartEntry {
+  packageName: string;
+  startAge: number;
+  endAge: number;
+  premium: PremiumInfo;
 }
+
 
 interface PremiumInfo {
   annual: number;
 }
 
 interface CartEntry {
+  id: string;
   packageName: string;
   startAge: number;
   endAge: number;
   premium: PremiumInfo;
   dateAdded: string;
+}
+
+interface CartItem {
+  id: string;
+  userId: string;
+  username: string;
+  packageName: string | { name: string } | Array<{ name: string }>;
+  startAge: number;
+  endAge: number;
+  premium: { annual: number };
+  dateAdded: string;
+}
+
+interface User {
+  id?: string;
+  _id?: string;
+  userId?: string;
+  username?: string;
 }
 
 interface Plan {
@@ -73,6 +98,7 @@ interface SelectedPackage {
 
 const InsuranceCalculator = () => {
   const { user } = useAuth();
+  const userId = user?._id || ''; // ดึง userId มาใช้งานแบบปลอดภัย
   console.log("user:", user);
 
   // ===== State Management =====
@@ -86,7 +112,7 @@ const InsuranceCalculator = () => {
     packages: []
   });
   // การเก็บสถานะข้อมูลที่เรียกใช้มาจาก API
-  const [packagesData, setPackagesData] = useState<PackageObject[]>([]);
+  const [packagesData, setPackagesData] = useState<any[]>([]);
   const [categoriesData, setCategoriesData] = useState<Record<string, string[]>>({});
   const [cart, setCart] = useState<CartEntry[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
@@ -113,30 +139,38 @@ const InsuranceCalculator = () => {
 
   const { toast } = useToast();
 
+  // ✅ ย้าย fetchCart ออกมาเป็นฟังก์ชันแยกเพื่อให้สามารถเรียกใช้ได้จากที่อื่น
 const fetchCart = async () => {
   try {
     const userId = user?._id || user?.userId || "";
     if (!userId) return;
 
-    const cartURL = `${config.Cart}?userId=${userId}`
-    const res = await fetch(cartURL);
+    const res = await fetch(`http://localhost:8080/api/cart?userId=${userId}`);
     if (!res.ok) {
-      console.error("Fetch cart failed");
+      console.error("Fetch cart failed with status", res.status);
       return;
     }
 
     const data = await res.json();
-    console.log("Fetched cart:", data);
+    console.log("Fetched cart data:", data);
 
+    // ตรวจสอบว่าข้อมูลที่ได้เป็น array หรือไม่
     if (Array.isArray(data)) {
       setCart(data);
+    } else if (data.cart && Array.isArray(data.cart)) {
+      // ถ้า backend ส่ง object ที่มี property cart เป็น array
+      setCart(data.cart);
     } else {
+      console.warn("Unexpected cart data structure:", data);
       setCart([]);
     }
   } catch (error) {
     console.error("Fetch cart error:", error);
   }
 };
+
+
+
 
 
   // Loading API 
@@ -146,8 +180,8 @@ const fetchCart = async () => {
       try {
         // ดึงทั้ง packages และ categories พร้อมกัน
         const [pkgRes, catRes] = await Promise.all([
-          fetch(config.Packages),
-          fetch(config.Categories),
+          fetch('http://localhost:8080/api/packages'),
+          fetch('http://localhost:8080/api/categories'),
         ]);
       
         const packages = await pkgRes.json();
@@ -157,7 +191,7 @@ const fetchCart = async () => {
       
         // แปลง category array ให้เป็น object: { categoryId: [packageId, ...] }
         const categoryMap: Record<string, string[]> = {};
-        categories.forEach((cat: { id: string; packages: string[] }) => {
+        categories.forEach((cat: any) => {
           categoryMap[cat.id] = cat.packages;
         });
         setCategoriesData(categoryMap);
@@ -174,67 +208,63 @@ const fetchCart = async () => {
       if (user) {
     fetchCart();
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // เพิ่ม & ลบ cart
-  const handleAddToCart = async (item: Omit<CartEntry, "dateAdded">) => {
-    try {
-      const userId = user?._id || user?.userId || "";
-      const username = user?.username || "Unknown User";
-      if (!userId) {
-        console.error("No userId, cannot add to cart");
-        return;
-      }
-
-      const newItemWithUser = {
-        ...item,
-        userId,
-        username,
-        dateAdded: new Date().toISOString(),
-      };
-
-      const res = await fetch(config.Cart, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newItemWithUser),
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Backend error:", errorText);
-        return;
-      }
-
-      // ดึงข้อมูล cart ใหม่จาก backend เพื่ออัพเดต UI ทันที
-      await fetchCart();
-
-      // แสดง toast แจ้งเตือนเมื่อเพิ่มสำเร็จ
-      toast({
-        title: "เพิ่มลงตะกร้าสำเร็จ",
-        description: `เพิ่ม ${item.packageName} ลงตะกร้าแล้ว`,
-      });
-
-      setCurrentStep(1);
-    } catch (error) {
-      console.error("เพิ่มตะกร้าล้มเหลว", error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถเพิ่มรายการลงตะกร้าได้",
-        variant: "destructive",
-      });
+  // 🛒 เพิ่ม & ลบ cart
+  const handleAddToCart = async (item: NewCartEntry) => {
+  try {
+    const userId = user?._id || user?.userId || "";
+    const username = user?.username || "Unknown User";
+    if (!userId) {
+      console.error("No userId, cannot add to cart");
+      return;
     }
-  };
 
-  // แก้ไข handleRemoveFromCart ให้ใช้ ID แทน packageName
+    const newItemWithUser = {
+      ...item,
+      userId,
+      username,
+      dateAdded: new Date().toISOString(),
+    };
+
+    const res = await fetch("http://localhost:8080/api/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newItemWithUser),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("Backend error:", errorText);
+      return;
+    }
+
+    await fetchCart();
+
+    toast({
+      title: "เพิ่มลงตะกร้าสำเร็จ",
+      description: `เพิ่ม ${item.packageName} ลงตะกร้าแล้ว`,
+    });
+
+    setCurrentStep(1);
+  } catch (error) {
+    console.error("เพิ่มตะกร้าล้มเหลว", error);
+    toast({
+      title: "เกิดข้อผิดพลาด",
+      description: "ไม่สามารถเพิ่มรายการลงตะกร้าได้",
+      variant: "destructive",
+    });
+  }
+};
+
+  // ✅ แก้ไข handleRemoveFromCart ให้ใช้ ID แทน packageName
 const handleRemoveFromCart = async (itemId: string) => {
   try {
     const userId = user?._id || user?.userId || "";
     if (!userId) return;
 
-    const REMOVE_ITEM_URL = `${config.Cart}/${itemId}?userId=${userId}`
     const res = await fetch(
-      REMOVE_ITEM_URL,
+      `http://localhost:8080/api/cart/${itemId}?userId=${userId}`,
       { method: "DELETE" }
     );
 
@@ -271,20 +301,12 @@ const handleRemoveFromCart = async (itemId: string) => {
 
     return packagesData
       .filter(pkg => {
-        const withinAge = age >= Number(pkg.minAge) && age <= Number(pkg.maxAge);
+        const withinAge = age >= pkg.minAge && age <= pkg.maxAge;
         const genderOK = !pkg.genderRestriction || pkg.genderRestriction === gender;
         return withinAge && genderOK;
       })
       .map(pkg => pkg.name);
   };
-
-  interface PricingTier {
-    ageFrom: number;
-    ageTo: number;
-    male?: number;
-    female?: number;
-    [key: string]: number | undefined;
-  }
 
   const getPlanOptionsFromPricing = (packageName: string): { label: string }[] => {
     const pkg = packagesData.find(p => p.name === packageName);
@@ -295,9 +317,9 @@ const handleRemoveFromCart = async (itemId: string) => {
 
     const gender = formData.gender === 'male' ? 'male' : 'female';
 
-    //  ค้นหาเฉพาะช่วงอายุที่ตรงกับ currentAge
-    const matching = (pkg.pricing as PricingTier[]).filter((p) => currentAge >= p.ageFrom && currentAge <= p.ageTo);
-    return matching.map((p) => {
+    // ✅ ค้นหาเฉพาะช่วงอายุที่ตรงกับ currentAge
+    const matching = pkg.pricing.filter((p: any) => currentAge >= p.ageFrom && currentAge <= p.ageTo);
+    return matching.map((p: any) => {
       const ageLabel = `อายุ ${p.ageFrom} ถึง ${p.ageTo}`;
       const price = p[gender];
 
@@ -312,6 +334,7 @@ const handleRemoveFromCart = async (itemId: string) => {
     handlePackageSelection,
     selectPackage,
     selectPlan,
+    handleSave,
     resetForm,
     goBackStep
   } = createFormStepHandlers({
@@ -378,8 +401,7 @@ const handleRemoveFromCart = async (itemId: string) => {
         * สามารถทำงานได้ : เพศ (gender) กับ ความคุ้มครองจนถึงอายุ (CoverageAge)
         * ผลลัพธ์        : package -> plan (price.male/price.female)
         */
-        {
-          const eligiblePackages = getEligiblePackages();
+        const eligiblePackages = getEligiblePackages();
         return (
           <Step1
             eligiblePackages={eligiblePackages}
@@ -387,11 +409,9 @@ const handleRemoveFromCart = async (itemId: string) => {
             goBack={goBackStep}
           />
         );
-      }
 
       case 2:
-        {
-          const availablePlans = getPlanOptionsFromPricing(stepData.selectedPackage);
+        const availablePlans = getPlanOptionsFromPricing(stepData.selectedPackage);
         return (
           <Step2
             availablePlans={availablePlans}
@@ -400,16 +420,15 @@ const handleRemoveFromCart = async (itemId: string) => {
             goBack={goBackStep}
           />
         );
-      }
 
       case 3:
         /**
          * ตรวจสอบข้อมูลที่จำเป็นต้องใช้ในขั้นตอนที่ 3 (Step3) ดึงข้อมูลที่ผู้ใช้เลือกมาซึ่งเป็น object
          * ทำการแปลงข้อมูล เพศกับช่วงอายุให้เรียบร้อย
          */
-        {
         const selectedPackageName = stepData.selectedPackage;
         const pkg = packagesData.find(p => p.name === selectedPackageName);
+
         const gender = formData.gender as 'male' | 'female';
         const currentAge = parseInt(formData.currentAge);
         const coverageAge = formData.coverageAge ? parseInt(formData.coverageAge) : currentAge;
@@ -434,7 +453,7 @@ const handleRemoveFromCart = async (itemId: string) => {
             <p className="text-red-500">ข้อมูลไม่ครบ ไม่สามารถแสดงเบี้ยประกันได้</p>
           )
         );
-      }
+
       default:
         return null;
     }
@@ -443,8 +462,36 @@ const handleRemoveFromCart = async (itemId: string) => {
   // ✅ ปรับปรุง flattenedCart ให้มีการจัดการ ID ที่ถูกต้อง
 const flattenedCart = cart.map((entry, index) => ({
   ...entry,
+  id: entry.id || `cart-item-${index}`, // ใช้ _id ถ้ามี ไม่งั้นใช้ index
   uniqueId: `${entry.packageName}-${entry.startAge}-${entry.endAge}-${index}`
 }));
+
+const { selectedPromotion } = usePromotion();
+
+// คำนวณราคารวมในตะกร้า (รวม annual premium ทุกตัว)
+const baseTotal = cart.reduce((sum, item) => sum + (item.premium?.annual || 0), 0);
+
+// คำนวณส่วนลด
+const discountAmount = React.useMemo(() => {
+  if (!selectedPromotion) return 0;
+
+  if (selectedPromotion.type === 'general') {
+    return (selectedPromotion.discountPercentage / 100) * baseTotal;
+  }
+
+  if (selectedPromotion.type === 'package-specific') {
+    // ลดเฉพาะแพ็กเกจที่ตรงกับ selectedPromotion.packageId (สมมติ packageName ตรงกับ packageId)
+    const applicableSum = cart
+      .filter(item => item.packageName === selectedPromotion.packageId)
+      .reduce((sum, item) => sum + (item.premium?.annual || 0), 0);
+    return (selectedPromotion.discountPercentage / 100) * applicableSum;
+  }
+
+  return 0;
+}, [selectedPromotion, cart, baseTotal]);
+
+const discountedTotal = baseTotal - discountAmount;
+
 
   return (
     <section id="calculator" className="py-8 bg-gray-50">
@@ -490,7 +537,7 @@ const flattenedCart = cart.map((entry, index) => ({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label htmlFor="currentAge" className="text-sm">อายุปัจจุบัน (ปี) *</Label>
+                      <Label htmlFor="currentAge" className="text-sm">อายุปัจจุบัน (ปี)</Label>
                       <Input
                         id="currentAge"
                         type="number"
@@ -504,7 +551,7 @@ const flattenedCart = cart.map((entry, index) => ({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="coverageAge" className="text-sm">ความคุ้มครองจนถึงอายุ (ปี) *</Label>
+                      <Label htmlFor="coverageAge" className="text-sm">ความคุ้มครองจนถึงอายุ (ปี)</Label>
                       <Input
                         id="coverageAge"
                         type="number"
@@ -604,42 +651,63 @@ const flattenedCart = cart.map((entry, index) => ({
               */}
 
               {/* 🛒 ตะกร้า */}
-              {Array.isArray(flattenedCart) && (
-                <div className="border rounded p-3 space-y-2 mt-4">
-                  <h5 className="font-semibold">ตะกร้าของคุณ:</h5>
-                  {flattenedCart.length > 0 ? (
-                    <>
-                      {flattenedCart.map((entry, index) => (
-                        <div
-                          key={entry.uniqueId || index}
-                          className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded"
-                        >
-                          <span>
-                            {entry.packageName} (อายุ {entry.startAge}–{entry.endAge}) – ฿
-                            {entry.premium?.annual
-                              ? entry.premium.annual.toLocaleString()
-                              : "-"}
-                          </span>
-                          <button
-                            onClick={() => handleRemoveFromCart(entry.packageName)}
-                            className="text-red-500 text-xs hover:text-red-700 px-2 py-1 rounded hover:bg-red-50"
-                          >
-                            ลบ
-                          </button>
-                        </div>
-                      ))}
-                      <div className="font-semibold border-t pt-2">
-                        รวม: ฿
-                        {flattenedCart
-                          .reduce((sum, i) => sum + (i.premium?.annual || 0), 0)
-                          .toLocaleString()}
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-sm text-gray-500">ยังไม่มีรายการในตะกร้า</p>
-                  )}
-                </div>
-              )}
+{Array.isArray(flattenedCart) && (
+  <div className="border rounded p-3 space-y-2 mt-4">
+    <h5 className="font-semibold">ตะกร้าของคุณ:</h5>
+    {flattenedCart.length > 0 ? (
+      <>
+        {flattenedCart.map((entry, index) => (
+          <div
+            key={entry.uniqueId || index}
+            className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded"
+          >
+            <span>
+              {entry.packageName} (อายุ {entry.startAge}–{entry.endAge}) – ฿
+              {entry.premium?.annual
+                ? entry.premium.annual.toLocaleString()
+                : "-"}
+            </span>
+            <button
+              onClick={() => handleRemoveFromCart(entry.id)}
+              className="text-red-500 text-xs hover:text-red-700 px-2 py-1 rounded hover:bg-red-50"
+            >
+              ลบ
+            </button>
+          </div>
+        ))}
+
+<div className="flex justify-between border-t pt-2 font-semibold">
+  <span className="w-40 text-right">รวมก่อนส่วนลด  :</span>
+  <span>฿ {baseTotal.toLocaleString()}</span>
+</div>
+
+{selectedPromotion && discountAmount > 0 && (
+  <div className="flex justify-between border-t pt-2 font-semibold text-red-600">
+    <span className="w-40 text-right">
+      ส่วนลด {selectedPromotion.name}  :
+    </span>
+    <span>
+     -฿
+       {discountAmount.toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+      })}
+    </span>
+  </div>
+)}
+
+<div className="flex justify-between border-t pt-2 font-bold text-lg text-brand-green">
+  <span className="w-40 text-right">รวมสุทธิ :</span>
+  <span>฿ {discountedTotal.toLocaleString()}</span>
+</div>
+      </>
+    ) : (
+      <p className="text-sm text-gray-500">ยังไม่มีรายการในตะกร้า</p>
+    )}
+  </div>
+)}
+
+              {/* Promotion Selector */}
+              <PromotionSelectorDialog />
   
               <div className="space-y-3 pt-4 border-t">
                 <Button 
@@ -670,19 +738,23 @@ const flattenedCart = cart.map((entry, index) => ({
           {
 
 
-  showResult && calculatedPremium && (() => {
+  
+showResult && calculatedPremium && (() => {
     const packageName = stepData.selectedPackage || 'แพ็กเกจที่เลือก';
     const coverage = parseCoverageFromText(packageName) ?? 0;
     
 
     return (
-      <QuoteResult 
-        formData={formData}
-        premium={calculatedPremium}
-        selectedPlans={selectedPlans}
-        cartItems={cart}
+<QuoteResult 
+  formData={formData}
+  premium={calculatedPremium}
+  selectedPlans={selectedPlans}
+  cartItems={cart}
+  selectedPromotion={selectedPromotion}
+  discountAmount={discountAmount}
+/>
 
-      />
+
     );
   })()
 }
