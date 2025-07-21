@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTicket } from '@fortawesome/free-solid-svg-icons';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { usePromotion} from '@/contexts/PromotionContext';
 import type { CartEntry,Promotion } from '@/lib/types';
 import axios from 'axios';
+import { config } from '@/config';
 
 const PromotionSelector = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -19,28 +22,51 @@ const PromotionSelector = () => {
   useEffect(() => {
   const fetchPromotions = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/promotions');
+      // 'http://localhost:8080/api/promotions'
+      const response = await axios.get(config.Promotions);
       if (Array.isArray(response.data)) {
         const now = new Date();
 
+        interface RawPromotion {
+          ID?: string;
+          _id?: string;
+          id?: string;
+          Name?: string;
+          name?: string;
+          Description?: string;
+          description?: string;
+          Type?: string;
+          type?: string;
+          DiscountPercentage?: number;
+          discountPercentage?: number;
+          PackageId?: string;
+          packageId?: string;
+          CategoryId?: string;
+          categoryId?: string;
+          ValidFrom?: string;
+          validFrom?: string;
+          ValidTo?: string;
+          validTo?: string;
+        }
+
         const mappedPromos = response.data
-          .map((promo: any) => {
-            const validFrom = new Date(promo.ValidFrom || promo.validFrom);
-            const validTo = new Date(promo.ValidTo || promo.validTo);
+          .map((promo: RawPromotion) => {
+            const validFrom = new Date(promo.ValidFrom || promo.validFrom || '');
+            const validTo = new Date(promo.ValidTo || promo.validTo || '');
 
             return {
               id: promo.ID || promo.id || promo._id || '',
               name: promo.Name || promo.name || '',
               description: promo.Description || promo.description || '',
               type:
-                promo.Type === 'package'
+                (promo.Type === 'package'
                   ? 'package-specific'
                   : promo.Type === 'general'
                   ? 'general'
                   : promo.Type === 'category'
                   ? 'category'
-                  : 'general',
-              discountPercentage: promo.DiscountPercentage || promo.discountPercentage || 0,
+                  : 'general') as import('@/lib/types').CouponType,
+              discountPercentage: promo.DiscountPercentage ?? promo.discountPercentage ?? 0,
               packageId: promo.PackageId || promo.packageId,
               categoryId: promo.CategoryId || promo.categoryId,
               validFrom,
@@ -113,7 +139,9 @@ const PromotionSelector = () => {
     <Dialog>
       <DialogTrigger asChild>
         <Button variant="outline" className="flex items-center gap-2">
-          <span>🎟️</span>
+          <span>
+      <FontAwesomeIcon icon={faTicket} /> {/* 🎟️ replacement */}
+      </span>
           {selectedPromotion ? `ใช้โปรโมชั่น: ${selectedPromotion.name}` : 'เลือกโปรโมชั่น'}
           {selectedPromotion && (
             <svg

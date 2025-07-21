@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { config } from "@/config";
 
 interface ConfirmDeleteAllProps {
   onCancel: () => void; // ฟังก์ชันปิด popup/dialog
@@ -15,7 +16,7 @@ const ConfirmDeleteAll: React.FC<ConfirmDeleteAllProps> = ({ onCancel }) => {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const response = await fetch("http://localhost:8080/api/packages", {
+      const response = await fetch(config.Packages, {
         method: "DELETE",
       });
 

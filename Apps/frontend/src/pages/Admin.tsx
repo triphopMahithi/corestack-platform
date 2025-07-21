@@ -611,7 +611,7 @@ const updatePricingInDB = async (
 
     const payload = {
       pricing: updatedPricing,
-      name: updatedPricing.name,           // ✅ ใช้ name แทน packageName
+      name: updatedPricing.name,           
       categoryId: updatedPricing.categoryId
     };
 
@@ -640,11 +640,11 @@ const handleSavePricing = async (index: number) => {
     female: parseFloat(editPrice.female),
   };
 
-  // ✅ 1. อัปเดต pricing ใน UI
+  //  1. อัปเดต pricing ใน UI
   const updatedPricing = [...selectedPackage.pricing];
   updatedPricing[index] = newData;
 
-  // ✅ 2. อัปเดตทั้ง pricing, name, categoryId
+  //  2. อัปเดตทั้ง pricing, name, categoryId
   const updatedPackage = {
     ...selectedPackage,
     pricing: updatedPricing,
@@ -654,7 +654,7 @@ const handleSavePricing = async (index: number) => {
 
   setSelectedPackage(updatedPackage);
 
-  // ✅ 3. อัปเดต backend
+  //  3. อัปเดต backend
   await updatePricingInDB(
     {
       ...newData,
@@ -664,7 +664,7 @@ const handleSavePricing = async (index: number) => {
     index
   );
 
-  // ✅ 4. ตรวจสอบ min/max
+  //  4. ตรวจสอบ min/max
   await checkAndUpdateMinMax(updatedPricing);
 
   setEditIndex(null);
@@ -1080,7 +1080,7 @@ const handleDeleteAllPackages = async () => {
     <div className="flex items-center gap-4">
 <>
   <div className="p-6">
-      <h1 className="text-xl font-bold mb-4">อัปโหลดไฟล์ข้อมูล Package</h1>
+      <h1 className="text-xl font-bold mb-4">อัปโหลดไฟล์ข้อมูลแพ็คเกจ</h1>
       <UploadWithConflictDialog />
     </div>
 

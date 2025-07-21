@@ -5,7 +5,6 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-
 interface FieldDiff {
   field: string;
   old: unknown;
@@ -58,7 +57,8 @@ export const UploadWithConflictDialog: React.FC = () => {
   formData.append("file", file);
 
   try {
-    const response = await axios.post("http://localhost:8080/api/upload?force=true", formData, {
+    const uploadURL = `${config.apiBase}/upload?force=ture`
+    const response = await axios.post(uploadURL, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
 

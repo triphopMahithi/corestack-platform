@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Calculator, RotateCcw, Package, Shield, Search, Save, CheckCircle, ChevronDown, Minus, Plus, Eye, Filter, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ShoppingCart } from 'lucide-react';
 import QuoteResult from '@/components/QuoteResult';
 import Step1 from '@/components/steps/Step1';
 import Step2 from '@/components/steps/Step2';
@@ -17,7 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { PromotionProvider, usePromotion } from '@/contexts/PromotionContext';
 import PromotionSelectorDialog from '@/components/PromotionSelector';
 import { Promotion, CouponType,PremiumResult } from '@/lib/types';
-
+import { config } from '@/config';
 interface CalculatorData {
   gender: string;
   currentAge: string;
@@ -30,8 +31,8 @@ interface CalculatorData {
 interface StepData {
   selectedPackage: string;
   selectedPlan: string;
-  searchResults: any;
-  savedData: any;
+  searchResults: unknown;
+  savedData: unknown;
 }
 
 interface NewCartEntry {
@@ -80,6 +81,24 @@ interface Plan {
   basePremium: number;
 }
 
+interface PricingTier {
+  ageFrom: number;
+  ageTo: number;
+  male: number;
+  female: number;
+  [key: string]: number;
+}
+
+interface Package {
+  id: string;
+  name: string;
+  minAge: number;
+  maxAge: number;
+  genderRestriction?: string;
+  pricing: PricingTier[];
+  // [key: string]: any; // Removed 'any' to avoid type errors
+}
+
 
 interface SelectedPackage {
   id: string;
@@ -102,7 +121,7 @@ const InsuranceCalculator = () => {
   console.log("user:", user);
 
   // ===== State Management =====
-  /* รวบรวมสถานะที่เราสามารถเรียกใช้ได้  */
+  const [packagesData, setPackagesData] = useState<Package[]>([]);
   const [formData, setFormData] = useState<CalculatorData>({
     gender: '',
     currentAge: '',
@@ -112,7 +131,6 @@ const InsuranceCalculator = () => {
     packages: []
   });
   // การเก็บสถานะข้อมูลที่เรียกใช้มาจาก API
-  const [packagesData, setPackagesData] = useState<any[]>([]);
   const [categoriesData, setCategoriesData] = useState<Record<string, string[]>>({});
   const [cart, setCart] = useState<CartEntry[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
@@ -144,8 +162,8 @@ const fetchCart = async () => {
   try {
     const userId = user?._id || user?.userId || "";
     if (!userId) return;
-
-    const res = await fetch(`http://localhost:8080/api/cart?userId=${userId}`);
+    const cartURL = `${config.Cart}?userId=${userId}`
+    const res = await fetch(cartURL);
     if (!res.ok) {
       console.error("Fetch cart failed with status", res.status);
       return;
@@ -180,8 +198,8 @@ const fetchCart = async () => {
       try {
         // ดึงทั้ง packages และ categories พร้อมกัน
         const [pkgRes, catRes] = await Promise.all([
-          fetch('http://localhost:8080/api/packages'),
-          fetch('http://localhost:8080/api/categories'),
+          fetch(config.Packages),
+          fetch(config.Categories),
         ]);
       
         const packages = await pkgRes.json();
@@ -191,7 +209,11 @@ const fetchCart = async () => {
       
         // แปลง category array ให้เป็น object: { categoryId: [packageId, ...] }
         const categoryMap: Record<string, string[]> = {};
-        categories.forEach((cat: any) => {
+        interface Category {
+          id: string;
+          packages: string[];
+        }
+        categories.forEach((cat: Category) => {
           categoryMap[cat.id] = cat.packages;
         });
         setCategoriesData(categoryMap);
@@ -208,6 +230,7 @@ const fetchCart = async () => {
       if (user) {
     fetchCart();
       }
+  // eslint-disable-next-line
   }, [user]);
 
   // 🛒 เพิ่ม & ลบ cart
@@ -227,7 +250,7 @@ const fetchCart = async () => {
       dateAdded: new Date().toISOString(),
     };
 
-    const res = await fetch("http://localhost:8080/api/cart", {
+    const res = await fetch(config.Cart, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newItemWithUser),
@@ -262,9 +285,10 @@ const handleRemoveFromCart = async (itemId: string) => {
   try {
     const userId = user?._id || user?.userId || "";
     if (!userId) return;
-
+    
+    const REMOVE_ITEM_URL = `${config.Cart}/${itemId}?userId=${userId}`
     const res = await fetch(
-      `http://localhost:8080/api/cart/${itemId}?userId=${userId}`,
+      REMOVE_ITEM_URL,
       { method: "DELETE" }
     );
 
@@ -308,26 +332,34 @@ const handleRemoveFromCart = async (itemId: string) => {
       .map(pkg => pkg.name);
   };
 
-  const getPlanOptionsFromPricing = (packageName: string): { label: string }[] => {
-    const pkg = packagesData.find(p => p.name === packageName);
-    if (!pkg || !Array.isArray(pkg.pricing)) return [];
-
-    const currentAge = parseInt(formData.currentAge);
-    if (isNaN(currentAge)) return [];
-
-    const gender = formData.gender === 'male' ? 'male' : 'female';
-
-    // ✅ ค้นหาเฉพาะช่วงอายุที่ตรงกับ currentAge
-    const matching = pkg.pricing.filter((p: any) => currentAge >= p.ageFrom && currentAge <= p.ageTo);
-    return matching.map((p: any) => {
-      const ageLabel = `อายุ ${p.ageFrom} ถึง ${p.ageTo}`;
-      const price = p[gender];
-
-      return {
-        label: `${ageLabel} : ฿ ${price?.toLocaleString() ?? '-'}`,
-      };
-    });
-  };
+  interface PricingTier {
+    ageFrom: number;
+    ageTo: number;
+    male: number;
+    female: number;
+    [key: string]: number;
+  }
+  
+    const getPlanOptionsFromPricing = (packageName: string): { label: string }[] => {
+      const pkg = packagesData.find(p => p.name === packageName);
+      if (!pkg || !Array.isArray(pkg.pricing)) return [];
+  
+      const currentAge = parseInt(formData.currentAge);
+      if (isNaN(currentAge)) return [];
+  
+      const gender = formData.gender === 'male' ? 'male' : 'female';
+  
+      //  ค้นหาเฉพาะช่วงอายุที่ตรงกับ currentAge
+      const matching = pkg.pricing.filter((p: PricingTier) => currentAge >= p.ageFrom && currentAge <= p.ageTo);
+      return matching.map((p: PricingTier) => {
+        const ageLabel = `อายุ ${p.ageFrom} ถึง ${p.ageTo}`;
+        const price = p[gender];
+  
+        return {
+          label: `${ageLabel} : ฿ ${price?.toLocaleString() ?? '-'}`,
+        };
+      });
+    };
 
   {/* Form Handler */}
   const {
@@ -401,6 +433,7 @@ const handleRemoveFromCart = async (itemId: string) => {
         * สามารถทำงานได้ : เพศ (gender) กับ ความคุ้มครองจนถึงอายุ (CoverageAge)
         * ผลลัพธ์        : package -> plan (price.male/price.female)
         */
+       {
         const eligiblePackages = getEligiblePackages();
         return (
           <Step1
@@ -409,8 +442,9 @@ const handleRemoveFromCart = async (itemId: string) => {
             goBack={goBackStep}
           />
         );
-
+      }
       case 2:
+        {
         const availablePlans = getPlanOptionsFromPricing(stepData.selectedPackage);
         return (
           <Step2
@@ -420,19 +454,20 @@ const handleRemoveFromCart = async (itemId: string) => {
             goBack={goBackStep}
           />
         );
-
+      }
       case 3:
         /**
          * ตรวจสอบข้อมูลที่จำเป็นต้องใช้ในขั้นตอนที่ 3 (Step3) ดึงข้อมูลที่ผู้ใช้เลือกมาซึ่งเป็น object
          * ทำการแปลงข้อมูล เพศกับช่วงอายุให้เรียบร้อย
          */
+        {
         const selectedPackageName = stepData.selectedPackage;
         const pkg = packagesData.find(p => p.name === selectedPackageName);
 
         const gender = formData.gender as 'male' | 'female';
         const currentAge = parseInt(formData.currentAge);
         const coverageAge = formData.coverageAge ? parseInt(formData.coverageAge) : currentAge;
-
+        
         return (
           // TODO: สรุปข้อมูลที่ลูกค้าได้กรอกไปทั้งหมด
           pkg && gender && currentAge && coverageAge ? (
@@ -453,10 +488,11 @@ const handleRemoveFromCart = async (itemId: string) => {
             <p className="text-red-500">ข้อมูลไม่ครบ ไม่สามารถแสดงเบี้ยประกันได้</p>
           )
         );
-
+      }
       default:
         return null;
     }
+    
   };
 
   // ✅ ปรับปรุง flattenedCart ให้มีการจัดการ ID ที่ถูกต้อง
@@ -650,10 +686,13 @@ const discountedTotal = baseTotal - discountAmount;
                 * แนวทางการแก้ไข : เรากำหนดให้ค่าของ parseInt(formData.CoverageAge) ? CoverageAge : CurrentAge
               */}
 
-              {/* 🛒 ตะกร้า */}
+              {/* ตะกร้า */}
 {Array.isArray(flattenedCart) && (
   <div className="border rounded p-3 space-y-2 mt-4">
-    <h5 className="font-semibold">ตะกร้าของคุณ:</h5>
+    <h5 className="font-semibold flex items-center gap-2">
+      <ShoppingCart className="w-5 h-5" />
+        ตะกร้าของคุณ
+    </h5>
     {flattenedCart.length > 0 ? (
       <>
         {flattenedCart.map((entry, index) => (
@@ -747,11 +786,16 @@ showResult && calculatedPremium && (() => {
     return (
 <QuoteResult 
   formData={formData}
-  premium={calculatedPremium}
+  premium={calculatedPremium ? { ...calculatedPremium, total: calculatedPremium.annual } : null}
   selectedPlans={selectedPlans}
-  cartItems={cart}
+  cartItems={cart.map(entry => ({
+    ...entry,
+    premium: {
+      finalPremium: entry.premium?.annual ?? null,
+      annual: entry.premium?.annual ?? 0,
+    }
+  }))}
   selectedPromotion={selectedPromotion}
-  discountAmount={discountAmount}
 />
 
 
