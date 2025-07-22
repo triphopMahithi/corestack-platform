@@ -28,7 +28,20 @@ Volume serial number is 24A3-3305
 ## Description 📝
 This project is a Full-Stack Web Application designed to integrate various technologies such as **TypeScript**, **Python**, **Go**, **MongoDB**, **NodeJS**, **NGINX**, and **Docker**. It aims to streamline the development process by combining multiple tools into a single platform. This project is highly beneficial for users who are looking for a robust and scalable solution for building and deploying web applications.
 
+<img src="assets/1.jpg" alt="Intro 1" width="500" />
+<p><strong>Figure 1:</strong> Home Page</p>
 
+<img src="assets/2.jpg" alt="Intro 2" width="500"/>
+<p><strong>Figure 2:</strong> Shopping Cart System</p>
+
+<img src="assets/4.jpg" alt="Intro 4" width="500"/>
+<p><strong>Figure 3:</strong> Product Editing Page</p>
+
+<img src="assets/5.jpg" alt="Intro 5" width="500"/>
+<p><strong>Figure 4:</strong> Issue Inspection Interface</p>
+
+<img src="assets/6.jpg" alt="Intro 6" width="500"/>
+<p><strong>Figure 5:</strong> Admin Dashboard</p>
 
 ## Table of Contents 📚
 - [Installation](#installation)
