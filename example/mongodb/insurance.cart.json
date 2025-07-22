@@ -1,0 +1,110 @@
+[{
+  "_id": {
+    "$oid": "687bd972746ff99e5430dfa2"
+  },
+  "userId": "687bcefbbd4041e12374db35",
+  "cart": [
+    {
+      "endAge": 11,
+      "premium": {
+        "annual": 25500
+      },
+      "dateAdded": {
+        "$date": "2025-07-19T17:44:18.493Z"
+      },
+      "packageName": "Health Happy Kids 15M",
+      "startAge": 11
+    },
+    {
+      "startAge": 11,
+      "endAge": 15,
+      "premium": {
+        "annual": 25500
+      },
+      "dateAdded": {
+        "$date": "2025-07-19T18:02:03.110Z"
+      },
+      "packageName": "Health Happy Kids 15M"
+    }
+  ],
+  "username": "test2"
+},
+{
+  "_id": {
+    "$oid": "687bde41746ff99e5430dfa3"
+  },
+  "userId": "687bde2ebd4041e12374db41",
+  "cart": [
+    {
+      "packageName": "Health Happy Kids 15M",
+      "startAge": 11,
+      "endAge": 15,
+      "premium": {
+        "annual": 25500
+      },
+      "dateAdded": {
+        "$date": "2025-07-19T18:23:02.575Z"
+      }
+    },
+    {
+      "packageName": "Health Happy Kids 5M",
+      "startAge": 11,
+      "endAge": 15,
+      "premium": {
+        "annual": 20200
+      },
+      "dateAdded": {
+        "$date": "2025-07-19T18:23:05.004Z"
+      }
+    },
+    {
+      "packageName": "Health Happy Kids 25M",
+      "startAge": 11,
+      "endAge": 15,
+      "premium": {
+        "annual": 33400
+      },
+      "dateAdded": {
+        "$date": "2025-07-19T18:23:06.614Z"
+      }
+    }
+  ],
+  "username": "test4"
+},
+{
+  "_id": {
+    "$oid": "687ec786746ff99e5430dfa5"
+  },
+  "userId": "687ec67c49c3aae208b25cde",
+  "cart": [
+    {
+      "_id": {
+        "$oid": "687ec78649c3aae208b25cdf"
+      },
+      "packageName": "Health Happy Kids 15M",
+      "startAge": 11,
+      "endAge": 11,
+      "premium": {
+        "annual": 25500
+      },
+      "dateAdded": {
+        "$date": "2025-07-21T23:04:38.845Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "687ec78949c3aae208b25ce0"
+      },
+      "packageName": "Health Saver 300K",
+      "startAge": 11,
+      "endAge": 11,
+      "premium": {
+        "annual": 12300
+      },
+      "dateAdded": {
+        "$date": "2025-07-21T23:04:41.865Z"
+      }
+    }
+  ],
+  "username": "Helloworld!"
+}]

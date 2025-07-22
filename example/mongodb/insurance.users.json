@@ -1,0 +1,286 @@
+[{
+  "_id": {
+    "$oid": "687bacf5f1a29a79c88a6c1e"
+  },
+  "username": "john123",
+  "email": "john@example.com",
+  "password": "$2a$12$yWsBvvIYiV6zQ8ZgxlAELOQThyi3zos4CT8TsbPZCmAPATnCyM4ly",
+  "role": "user",
+  "createdAt": {
+    "$date": "2025-07-19T14:34:29.814Z"
+  },
+  "lastLogin": {
+    "$date": {
+      "$numberLong": "-62135596800000"
+    }
+  },
+  "loginCount": 0,
+  "lastIP": "",
+  "lastDevice": "",
+  "isActive": false,
+  "lastActivity": {
+    "$date": {
+      "$numberLong": "-62135596800000"
+    }
+  }
+},
+{
+  "_id": {
+    "$oid": "687baf7cf1a29a79c88a6c1f"
+  },
+  "username": "google",
+  "email": "arti@google.com",
+  "password": "$2a$12$r9vEb8N34Kn4Igy8xBLqvupnCzpyiS6OMbixh0uDYzjsvyk.Aoj4W",
+  "role": "user",
+  "createdAt": {
+    "$date": "2025-07-19T14:45:16.367Z"
+  },
+  "lastLogin": {
+    "$date": {
+      "$numberLong": "-62135596800000"
+    }
+  },
+  "loginCount": 0,
+  "lastIP": "",
+  "lastDevice": "",
+  "isActive": false,
+  "lastActivity": {
+    "$date": {
+      "$numberLong": "-62135596800000"
+    }
+  }
+},
+{
+  "_id": {
+    "$oid": "687bafaff1a29a79c88a6c20"
+  },
+  "username": "user",
+  "email": "user@google.com",
+  "password": "$2a$12$A9rUzVKcCvcs0M/y66WEa.n8RZ9Fp6e.1lV5ynPvqg/osjEF3gF62",
+  "role": "user",
+  "createdAt": {
+    "$date": "2025-07-19T14:46:07.250Z"
+  },
+  "lastLogin": {
+    "$date": {
+      "$numberLong": "-62135596800000"
+    }
+  },
+  "loginCount": 0,
+  "lastIP": "",
+  "lastDevice": "",
+  "isActive": false,
+  "lastActivity": {
+    "$date": {
+      "$numberLong": "-62135596800000"
+    }
+  }
+},
+{
+  "_id": {
+    "$oid": "687bb2d178c433c2b5c3c7b6"
+  },
+  "username": "Google",
+  "email": "Google@example.com",
+  "password": "$2a$12$I6/f5nREP.KARqRnsFOVA.x1rM3bxLNf0RhgrCKVLqv0S9YIqCLL.",
+  "role": "user",
+  "createdAt": {
+    "$date": "2025-07-19T14:59:29.548Z"
+  },
+  "lastLogin": {
+    "$date": {
+      "$numberLong": "-62135596800000"
+    }
+  },
+  "loginCount": 0,
+  "lastIP": "",
+  "lastDevice": "",
+  "isActive": false,
+  "lastActivity": {
+    "$date": {
+      "$numberLong": "-62135596800000"
+    }
+  }
+},
+{
+  "_id": {
+    "$oid": "687bbbac123325ce7dc30b92"
+  },
+  "username": "test1",
+  "email": "Test1@example.com",
+  "password": "$2a$12$7QzySW2.J1R0kuK4/K07zOU5pWLyYGnOGk5oenP79luO7ZiV6zAgG",
+  "role": "admin",
+  "createdAt": {
+    "$date": "2025-07-19T15:37:16.652Z"
+  },
+  "lastLogin": {
+    "$date": "2025-07-19T16:00:36.632Z"
+  },
+  "loginCount": 4,
+  "lastIP": "::1",
+  "lastDevice": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+  "isActive": true,
+  "lastActivity": {
+    "$date": "2025-07-19T16:00:36.632Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "687bc10e1ba310b8495dba71"
+  },
+  "username": "Abeaad",
+  "email": "Abe@gaml.com",
+  "password": "$2a$12$5W8X.0sQDT88Q3hIGij/1Oy12Ux8ZeO82OWuswoWQVP0ZWgfqXF3O",
+  "role": "user",
+  "createdAt": {
+    "$date": "2025-07-19T16:00:14.280Z"
+  },
+  "lastLogin": {
+    "$date": "2025-07-19T16:00:14.280Z"
+  },
+  "loginCount": 0,
+  "lastIP": "",
+  "lastDevice": "",
+  "isActive": true,
+  "lastActivity": {
+    "$date": "2025-07-19T16:00:14.280Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "687bc3f0bd4041e12374db33"
+  },
+  "username": "helloworld",
+  "email": "hello@gmail.com",
+  "password": "$2a$12$piHf7xnevWTDicpEmS44Oux4MPF/zL6mzW0yJ9KnSUje1W.SpQDSW",
+  "role": "user",
+  "provider": "local",
+  "createdAt": {
+    "$date": "2025-07-19T16:12:32.712Z"
+  },
+  "lastLogin": {
+    "$date": "2025-07-19T16:12:42.270Z"
+  },
+  "loginCount": 1,
+  "lastIP": "::1",
+  "lastDevice": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+  "isActive": true,
+  "lastActivity": {
+    "$date": "2025-07-19T16:12:42.270Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "687bcefbbd4041e12374db35"
+  },
+  "username": "test2",
+  "email": "Test2@example.com",
+  "password": "$2a$12$/xqoaX5KLcBcHdfudfnHquDSlEXh0jvR5nTJ.JMOMaq5X.VQYUu9a",
+  "role": "user",
+  "provider": "local",
+  "createdAt": {
+    "$date": "2025-07-19T16:59:39.484Z"
+  },
+  "lastLogin": {
+    "$date": "2025-07-19T18:01:59.697Z"
+  },
+  "loginCount": 5,
+  "lastIP": "::1",
+  "lastDevice": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+  "isActive": true,
+  "lastActivity": {
+    "$date": "2025-07-19T18:01:59.697Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "687bcf0ebd4041e12374db36"
+  },
+  "username": "test3",
+  "email": "test3@gmail.com",
+  "password": "$2a$12$KpOwyV3IywV35KPxl8uHNepE7aWXahWKHbU/U/ZnDOZCR8ZNqLova",
+  "role": "user",
+  "provider": "local",
+  "createdAt": {
+    "$date": "2025-07-19T16:59:58.949Z"
+  },
+  "lastLogin": {
+    "$date": "2025-07-19T16:59:58.949Z"
+  },
+  "loginCount": 0,
+  "lastIP": "",
+  "lastDevice": "",
+  "isActive": true,
+  "lastActivity": {
+    "$date": "2025-07-19T16:59:58.949Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "687bdbd0bd4041e12374db40"
+  },
+  "username": "ABc31",
+  "email": "ABc31@a.com",
+  "password": "$2a$12$ClRyHBY7vdnhPQrgt2GWMu2m0fBYAFTXCEFfiRIqY2CpQfb7ziwqq",
+  "role": "user",
+  "provider": "local",
+  "createdAt": {
+    "$date": "2025-07-19T17:54:24.787Z"
+  },
+  "lastLogin": {
+    "$date": "2025-07-19T17:54:24.787Z"
+  },
+  "loginCount": 0,
+  "lastIP": "",
+  "lastDevice": "",
+  "isActive": true,
+  "lastActivity": {
+    "$date": "2025-07-19T17:54:24.787Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "687bde2ebd4041e12374db41"
+  },
+  "username": "test4",
+  "email": "test4@gmail.com",
+  "password": "$2a$12$tJiH/hTM4PgiPjmZ59S7XO9e60fc6yGAd3.2xS3FlmdbKE1Gs/Cii",
+  "role": "user",
+  "provider": "local",
+  "createdAt": {
+    "$date": "2025-07-19T18:04:30.370Z"
+  },
+  "lastLogin": {
+    "$date": "2025-07-19T18:41:36.058Z"
+  },
+  "loginCount": 3,
+  "lastIP": "::1",
+  "lastDevice": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36",
+  "isActive": true,
+  "lastActivity": {
+    "$date": "2025-07-19T18:41:36.058Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "687ec67c49c3aae208b25cde"
+  },
+  "username": "Helloworld!",
+  "email": "hello1@gmil.com",
+  "password": "$2a$12$KTz4XUlGt2wzRZgT7uFLqOyWCOiAprjQTti8rDqmqVyQPgS45WnBS",
+  "role": "user",
+  "provider": "local",
+  "createdAt": {
+    "$date": "2025-07-21T23:00:12.969Z"
+  },
+  "lastLogin": {
+    "$date": "2025-07-21T23:04:32.954Z"
+  },
+  "loginCount": 2,
+  "lastIP": "::1",
+  "lastDevice": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+  "isActive": true,
+  "lastActivity": {
+    "$date": "2025-07-21T23:04:32.954Z"
+  }
+}]
