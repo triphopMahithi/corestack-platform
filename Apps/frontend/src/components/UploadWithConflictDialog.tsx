@@ -57,7 +57,7 @@ export const UploadWithConflictDialog: React.FC = () => {
   formData.append("file", file);
 
   try {
-    const uploadURL = `${config.apiBase}/upload?force=ture`
+    const uploadURL = `${config.apiBase}/upload?force=true`
     const response = await axios.post(uploadURL, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
