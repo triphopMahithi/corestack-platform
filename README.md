@@ -43,6 +43,8 @@ This project is a Full-Stack Web Application designed to integrate various techn
 <img src="assets/6.jpg" alt="Intro 6" width="500"/>
 <p><strong>Figure 5:</strong> Admin Dashboard</p>
 
+<img src="assets/7.png" alt="Intro 7" width="500"/>
+<p><strong>Figure 5:</strong> (simple) Retrieval-augmented generation </p>
 ## Table of Contents 📚
 - [Installation](#installation)
 - [Usage](#usage)
